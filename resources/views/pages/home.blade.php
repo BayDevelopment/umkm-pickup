@@ -11,7 +11,7 @@
 
                     <div class="td-badge mb-3">
                         <span>⚡</span>
-                        <span>Katalog e-commerce modern • Cepat • Responsif</span>
+                        <span>Modern • Cepat • Responsif</span>
                     </div>
 
                     <h1 class="display-5 fw-bold lh-1">
@@ -55,24 +55,6 @@
                 <div class="col-lg-6">
 
                     <div class="td-card p-4">
-
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="td-icon">🧠</div>
-
-                                <div>
-                                    <div class="fw-semibold">Trendora Preview</div>
-                                    <div class="small td-subtitle">
-                                        UI modern untuk katalog produk
-                                    </div>
-                                </div>
-                            </div>
-
-                            <span class="td-chip">v1.0</span>
-
-                        </div>
-
 
                         <div class="row g-3">
 
@@ -165,7 +147,7 @@
             <div class="text-center mb-5">
                 <h2 class="fw-bold">Kenapa Trendora?</h2>
                 <p class="td-subtitle mb-0">
-                    Solusi katalog yang modern, cepat, dan mudah dikelola.
+                    Modern, cepat, dan mudah dikelola.
                 </p>
             </div>
 
