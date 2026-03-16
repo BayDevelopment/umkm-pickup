@@ -137,6 +137,23 @@ class AuthController extends Controller
 
     public function RegisterProses(Request $request)
     {
+        $messages = [
+            'name.required' => 'Nama wajib diisi.',
+            'name.string' => 'Nama harus berupa teks.',
+            'name.max' => 'Nama maksimal 100 karakter.',
+
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.max' => 'Email maksimal 100 karakter.',
+            'email.unique' => 'Email sudah terdaftar.',
+
+            'password.required' => 'Password wajib diisi.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
+            'password.min' => 'Password minimal 8 karakter.',
+            'password.max' => 'Password maksimal 100 karakter.',
+            'password.regex' => 'Password harus mengandung huruf besar, huruf kecil, dan angka.',
+        ];
+
         $request->validate([
             'name' => 'required|string|max:100',
             'email' => 'required|email|max:100|unique:users,email',
@@ -145,19 +162,17 @@ class AuthController extends Controller
                 'confirmed',
                 'min:8',
                 'max:100',
-                'regex:/[a-z]/',
-                'regex:/[A-Z]/',
-                'regex:/[0-9]/'
+                'regex:/[a-z]/',   // huruf kecil
+                'regex:/[A-Z]/',   // huruf besar
+                'regex:/[0-9]/'    // angka
             ],
-        ]);
+        ], $messages);
 
         $ip = $request->ip();
-
         $key = "register:{$ip}";
 
         // limit register
         if (RateLimiter::tooManyAttempts($key, 3)) {
-
             $seconds = RateLimiter::availableIn($key);
 
             return back()->withErrors([

@@ -62,7 +62,7 @@
 
                         {{-- Harga --}}
                         <div class="td-detail-price mb-4">
-                            <div class="td-price-now">
+                            <div class="td-price-now" id="productPrice">
                                 Rp {{ number_format($product->lowest_price ?? 0, 0, ',', '.') }}
                             </div>
                         </div>
@@ -153,68 +153,30 @@
             const isLoggedIn = @json(auth()->check());
 
             const radios = document.querySelectorAll('input[name="variant_id"]');
+            const priceEl = document.getElementById('productPrice');
             const qtyInput = document.getElementById('qtyInput');
             const stockInfo = document.getElementById('stockInfo');
             const form = document.getElementById('productActionForm');
             const buttons = form ? form.querySelectorAll('button') : [];
 
-            // Disable qty & tombol awal
-            if (qtyInput) qtyInput.disabled = true;
-            buttons.forEach(btn => btn.disabled = true);
-
-            radios.forEach(radio => {
-                radio.addEventListener('change', function() {
-
-                    const stock = parseInt(this.dataset.stock || 0);
-
-                    if (qtyInput) {
-                        qtyInput.value = 1;
-                        qtyInput.max = stock;
-                        qtyInput.disabled = stock <= 0;
-                    }
-
-                    if (stockInfo) {
-                        stockInfo.innerHTML = stock > 0 ?
-                            'Stok tersedia: ' + stock :
-                            'Stok habis';
-                    }
-
-                    buttons.forEach(btn => btn.disabled = stock <= 0);
-                });
-            });
-
             // ===============================
-            // 🔥 GLOBAL FUNCTIONS
+            // 🔥 Helper Functions
             // ===============================
 
-            window.setMainImg = function(src) {
-                const mainImg = document.getElementById('mainProductImg');
-                if (!mainImg) return;
-
-                mainImg.style.opacity = 0;
+            function updatePrice(price) {
+                if (!priceEl) return;
+                priceEl.style.opacity = 0;
                 setTimeout(() => {
-                    mainImg.src = src;
-                    mainImg.style.opacity = 1;
-                }, 150);
+                    priceEl.textContent = 'Rp ' + Number(price).toLocaleString('id-ID');
+                    priceEl.style.opacity = 1;
+                }, 100);
             }
 
-            window.qtyMinus = function() {
-                if (!qtyInput || qtyInput.disabled) return;
-                qtyInput.value = Math.max(1, parseInt(qtyInput.value || 1) - 1);
-            }
-
-            window.qtyPlus = function() {
-                if (!qtyInput || qtyInput.disabled) return;
-                const max = parseInt(qtyInput.max || 1);
-                qtyInput.value = Math.min(max, parseInt(qtyInput.value || 1) + 1);
-            }
-
-            window.getSelectedVariant = function() {
+            function getSelectedVariant() {
                 return document.querySelector('input[name="variant_id"]:checked');
             }
 
-            window.validateProductSelection = function() {
-
+            function validateProductSelection() {
                 const selected = getSelectedVariant();
 
                 if (!selected) {
@@ -240,12 +202,67 @@
                 return true;
             }
 
-            window.submitCart = function() {
+            // ===============================
+            // 🔥 Initialize
+            // ===============================
 
+            if (qtyInput) qtyInput.disabled = true;
+            buttons.forEach(btn => btn.disabled = true);
+
+            radios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const stock = parseInt(this.dataset.stock || 0);
+                    const price = parseFloat(this.dataset.price || 0);
+
+                    // Update qty
+                    if (qtyInput) {
+                        qtyInput.value = 1;
+                        qtyInput.max = stock;
+                        qtyInput.disabled = stock <= 0;
+                    }
+
+                    // Update stock info
+                    if (stockInfo) {
+                        stockInfo.innerHTML = stock > 0 ? 'Stok tersedia: ' + stock : 'Stok habis';
+                    }
+
+                    // Enable/disable tombol
+                    buttons.forEach(btn => btn.disabled = stock <= 0);
+
+                    // Update harga
+                    updatePrice(price);
+                });
+            });
+
+            // ===============================
+            // 🔥 Global Functions
+            // ===============================
+
+            window.setMainImg = function(src) {
+                const mainImg = document.getElementById('mainProductImg');
+                if (!mainImg) return;
+                mainImg.style.opacity = 0;
+                setTimeout(() => {
+                    mainImg.src = src;
+                    mainImg.style.opacity = 1;
+                }, 150);
+            }
+
+            window.qtyMinus = function() {
+                if (!qtyInput || qtyInput.disabled) return;
+                qtyInput.value = Math.max(1, parseInt(qtyInput.value || 1) - 1);
+            }
+
+            window.qtyPlus = function() {
+                if (!qtyInput || qtyInput.disabled) return;
+                const max = parseInt(qtyInput.max || 1);
+                qtyInput.value = Math.min(max, parseInt(qtyInput.value || 1) + 1);
+            }
+
+            window.submitCart = function() {
                 if (!validateProductSelection()) return;
 
                 const selected = getSelectedVariant();
-
                 document.getElementById('formVariantId').value = selected.value;
                 document.getElementById('formQty').value = qtyInput.value;
 
@@ -254,11 +271,9 @@
             }
 
             window.submitBuyNow = function() {
-
                 if (!validateProductSelection()) return;
 
                 if (!isLoggedIn) {
-
                     Swal.fire({
                         icon: 'info',
                         title: 'Login Diperlukan',
@@ -272,12 +287,10 @@
                             window.location.href = "{{ route('login') }}?redirect=checkout";
                         }
                     });
-
                     return;
                 }
 
                 const selected = getSelectedVariant();
-
                 document.getElementById('formVariantId').value = selected.value;
                 document.getElementById('formQty').value = qtyInput.value;
 
