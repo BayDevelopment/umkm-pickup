@@ -2,6 +2,8 @@
 
 @section('customer')
     <section class="order-detail-page">
+        <div id="order-container" data-order-id="{{ $order->id }}"></div>
+
         <div class="container py-5">
 
             {{-- BACK BUTTON --}}
@@ -238,14 +240,12 @@
 
                                 <div class="upload-success-desc">
 
-                                    @if ($order->payment_status === 'waiting_confirmation')
-                                        Sedang diverifikasi oleh admin. Proses ini biasanya memakan waktu beberapa menit.
-                                    @elseif ($order->payment_status === 'confirmed')
+                                    @if ($order->payment_status === 'pending')
+                                        Sedang diverifikasi oleh admin.
+                                    @elseif ($order->payment_status === 'paid')
                                         Pembayaran berhasil dikonfirmasi. Pesanan sedang diproses.
                                     @elseif ($order->payment_status === 'rejected')
-                                        Bukti transfer ditolak. Silakan upload ulang bukti yang valid.
-                                    @else
-                                        Bukti transfer telah diterima.
+                                        Bukti transfer ditolak. Silakan upload ulang.
                                     @endif
 
                                 </div>
@@ -266,17 +266,17 @@
                             <div class="upload-success-badge">
 
                                 @switch($order->payment_status)
-                                    @case('waiting_confirmation')
+                                    @case('pending')
                                         <span class="badge badge-warning">
                                             <i class="fa-solid fa-clock"></i>
-                                            Verifikasi
+                                            Menunggu Verifikasi
                                         </span>
                                     @break
 
-                                    @case('confirmed')
+                                    @case('paid')
                                         <span class="badge badge-success">
                                             <i class="fa-solid fa-check"></i>
-                                            Dikonfirmasi
+                                            Berhasil
                                         </span>
                                     @break
 
@@ -367,7 +367,8 @@
         </div>
     </section>
 @endsection
-@section('styles')
+
+@push('styles')
     <style>
         /* ================= BRANCH CARD ================= */
         .branch-card {
@@ -1118,12 +1119,15 @@
 
         }
     </style>
-@endsection
-@section('scripts')
+@endpush
+
+@push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
 
-            // COPY REKENING WITH FEEDBACK
+            // =========================
+            // COPY REKENING
+            // =========================
             window.copyRekening = function(rekening, btn) {
                 navigator.clipboard.writeText(rekening).then(() => {
 
@@ -1141,27 +1145,33 @@
                 });
             };
 
-            // FILE NAME UPDATE
+            // =========================
+            // FILE INPUT LABEL
+            // =========================
             document.querySelectorAll('.file-input').forEach(input => {
                 input.addEventListener('change', function() {
                     const label = this.nextElementSibling.querySelector('.file-name-text');
-
                     if (this.files.length > 0) {
                         label.textContent = this.files[0].name;
                     }
                 });
             });
 
-        });
+            // =========================
+            // AMBIL ORDER ID
+            // =========================
+            const orderContainer = document.getElementById("order-container");
+            if (!orderContainer) return;
 
+            const orderId = orderContainer.dataset.orderId;
+            if (!orderId) return;
 
-        document.addEventListener("DOMContentLoaded", function() {
-            const REFRESH_INTERVAL = 5000; // 5 detik
+            console.log("ORDER ID:", orderId);
 
             // =========================
-            // mapping warna status
+            // ORDER STATUS
             // =========================
-            function getStatusClass(status) {
+            function getOrderStatusClass(status) {
                 switch (status) {
                     case "pending":
                         return "badge-pending";
@@ -1176,34 +1186,59 @@
                 }
             }
 
-            // =========================
-            // mapping text status
-            // =========================
-            function getStatusText(status) {
+            function getOrderStatusText(status) {
                 switch (status) {
                     case "pending":
-                        return "Menunggu";
+                        return "Pesanan Menunggu Konfirmasi";
                     case "process":
-                        return "Diproses";
+                        return "Pesanan Sedang Diproses";
                     case "done":
-                        return "Selesai";
+                        return "Pesanan Selesai";
                     case "cancel":
-                        return "Dibatalkan";
+                        return "Pesanan Dibatalkan";
                     default:
-                        return status;
+                        return "Pesanan Menunggu Konfirmasi"; // fallback aman
                 }
             }
 
             // =========================
-            // update badge safely
+            // PAYMENT STATUS
             // =========================
-            function updateBadge(badgeId, textId, status) {
+            function getPaymentStatusClass(status) {
+                switch (status) {
+                    case "pending":
+                        return "badge-pending";
+                    case "paid":
+                        return "badge-done";
+                    case "rejected":
+                        return "badge-cancel";
+                    default:
+                        return "badge-default";
+                }
+            }
+
+            function getPaymentStatusText(status) {
+                switch (status) {
+                    case "pending":
+                        return "Pembayaran Menunggu Verifikasi";
+                    case "paid":
+                        return "Pembayaran Berhasil";
+                    case "rejected":
+                        return "Pembayaran Ditolak";
+                    default:
+                        return "Pembayaran Menunggu Verifikasi"; // fallback aman
+                }
+            }
+
+            // =========================
+            // UPDATE BADGE
+            // =========================
+            function updateBadge(badgeId, textId, status, type = 'order') {
                 const badge = document.getElementById(badgeId);
                 const text = document.getElementById(textId);
 
                 if (!badge || !text) return;
 
-                // hapus class status lama saja
                 badge.classList.remove(
                     "badge-pending",
                     "badge-process",
@@ -1212,61 +1247,116 @@
                     "badge-default"
                 );
 
-                // tambah class baru
-                badge.classList.add(getStatusClass(status));
-
-                // update text
-                text.innerText = getStatusText(status);
-            }
-
-            // =========================
-            // ambil order id dari attribute
-            // =========================
-            const orderContainer = document.getElementById("order-container");
-
-            if (!orderContainer) return;
-
-            const orderId = orderContainer.dataset.orderId;
-
-            if (!orderId) return;
-
-            // =========================
-            // fetch status dari server
-            // =========================
-            async function fetchStatus() {
-                try {
-                    const response = await fetch(`/customer/orders/${orderId}`);
-
-                    if (!response.ok) return;
-
-                    const data = await response.json();
-
-                    updateBadge(
-                        "order-status-badge",
-                        "order-status-text",
-                        data.status
-                    );
-
-                    updateBadge(
-                        "payment-status-badge",
-                        "payment-status-text",
-                        data.payment_status
-                    );
-                } catch (error) {
-                    console.warn("Status update failed:", error);
+                if (type === 'order') {
+                    badge.classList.add(getOrderStatusClass(status));
+                    text.innerText = getOrderStatusText(status);
+                } else {
+                    badge.classList.add(getPaymentStatusClass(status));
+                    text.innerText = getPaymentStatusText(status);
                 }
             }
 
             // =========================
-            // jalankan pertama kali
+            // FULL UI UPDATE
             // =========================
-            fetchStatus();
+            function updateOrderUI(e) {
+
+                // badge order
+                updateBadge("order-status-badge", "order-status-text", e.status, 'order');
+
+                // badge payment
+                updateBadge("payment-status-badge", "payment-status-text", e.payment_status, 'payment');
+
+                // =========================
+                // DESCRIPTION
+                // =========================
+                const desc = document.querySelector('.order-description');
+
+                if (desc) {
+                    switch (e.status) {
+                        case "pending":
+                            desc.innerText = "Pesanan kamu sudah dibuat dan sedang menunggu konfirmasi dari toko.";
+                            break;
+                        case "process":
+                            desc.innerText = "Pesanan kamu sedang disiapkan oleh toko.";
+                            break;
+                        case "done":
+                            desc.innerText = "Pesanan sudah selesai dan berhasil diterima.";
+                            break;
+                        case "cancel":
+                            desc.innerText = "Pesanan dibatalkan oleh sistem atau toko.";
+                            break;
+                    }
+                }
+
+                // =========================
+                // INFO BOX
+                // =========================
+                const oldBox = document.querySelector('.order-info-box');
+                if (oldBox) oldBox.remove();
+
+                const container = document.querySelector('.order-header-card');
+                if (!container) return;
+
+                if (e.status === "process") {
+                    container.insertAdjacentHTML('beforeend', `
+                <div class="order-info-box info-process">
+                    Silahkan datangi toko terdekat, tunjukan bukti, dan ambil pesanan anda.
+                </div>
+            `);
+                }
+
+                if (e.status === "done") {
+                    container.insertAdjacentHTML('beforeend', `
+                <div class="order-info-box info-done">
+                    Terimakasih sudah belanja ditoko kami dengan aplikasi ini 🎉
+                </div>
+            `);
+                }
+            }
 
             // =========================
-            // auto refresh interval
+            // PUSHER
             // =========================
-            setInterval(fetchStatus, REFRESH_INTERVAL);
+            Pusher.logToConsole = true;
+
+            const echo = new Echo({
+                broadcaster: 'pusher',
+                key: "{{ env('PUSHER_APP_KEY') }}",
+                cluster: "{{ env('PUSHER_APP_CLUSTER') }}",
+                forceTLS: true
+            });
+
+            // =========================
+            // REALTIME LISTENER
+            // =========================
+            echo.channel('order.' + orderId)
+                .listen('.OrderStatusUpdated', (e) => {
+
+                    console.log("REALTIME MASUK:", e);
+
+                    // VALIDASI DATA
+                    if (!e.status || !e.payment_status) {
+                        console.warn("DATA REALTIME TIDAK LENGKAP:", e);
+                        return;
+                    }
+
+                    // NORMALISASI
+                    e.status = e.status.toLowerCase();
+                    e.payment_status = e.payment_status.toLowerCase();
+
+                    // UPDATE UI
+                    requestAnimationFrame(() => {
+                        updateOrderUI(e);
+                    });
+
+                    // TOAST
+                    Toast.fire({
+                        icon: 'info',
+                        title: 'Status pesanan diperbarui'
+                    });
+                });
 
         });
     </script>
-@endsection
+@endpush

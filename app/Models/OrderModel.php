@@ -47,12 +47,14 @@ class OrderModel extends Model
         return $this->belongsTo(BranchModel::class, 'branch_id');
     }
 
-
+    // gabungan dengan websocket pusher
     protected static function booted()
     {
         static::updated(function (OrderModel $order) {
 
-            // hanya restore jika cancel dan belum pernah restore
+            // =========================
+            // 🔥 RESTORE STOCK (CANCEL)
+            // =========================
             if (
                 $order->status === 'cancel'
                 && !$order->stock_restored
@@ -60,13 +62,11 @@ class OrderModel extends Model
 
                 DB::transaction(function () use ($order) {
 
-                    // load relasi jika belum
                     $order->loadMissing('items.variant');
 
                     foreach ($order->items as $item) {
 
                         if ($item->variant) {
-
                             $item->variant->increment(
                                 'stock',
                                 $item->quantity
@@ -74,11 +74,23 @@ class OrderModel extends Model
                         }
                     }
 
-                    // tandai sudah restore agar tidak double
                     $order->updateQuietly([
                         'stock_restored' => true
                     ]);
                 });
+            }
+
+            // =========================
+            // 🔥 REALTIME (WEBSOCKET)
+            // =========================
+
+            // hanya broadcast kalau status berubah
+            if ($order->wasChanged(['status', 'payment_status'])) {
+
+                $order->refresh();
+
+                // broadcast(new \App\Events\OrderStatusUpdated($order))->toOthers();
+                broadcast(new \App\Events\OrderStatusUpdated($order));
             }
         });
     }

@@ -136,7 +136,7 @@ class OrderController extends Controller
     // reload order
     public function statusAll()
     {
-        $orders = OrderModel::where('user_id', auth()->Auth::id())
+        $orders = OrderModel::where('user_id', Auth::id())
             ->select('id', 'status')
             ->get();
 

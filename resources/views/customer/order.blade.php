@@ -68,7 +68,8 @@
         </div>
     </section>
 @endsection
-@section('styles')
+
+@push('styles')
     <style>
         /* scroll */
         .order-scroll {
@@ -460,80 +461,118 @@
             color: #a78bfa;
         }
     </style>
-@endsection
-@section('scripts')
+@endpush
+
+@push('scripts')
     <script>
-        function getStatusClass(status) {
-            switch (status) {
-                case 'pending':
-                    return 'badge-pending';
-                case 'process':
-                    return 'badge-process';
-                case 'done':
-                    return 'badge-done';
-                case 'cancel':
-                    return 'badge-cancel';
-                default:
-                    return 'badge-default';
+        document.addEventListener("DOMContentLoaded", function() {
+
+            // =========================
+            // HELPER
+            // =========================
+            function getStatusClass(status) {
+                switch (status) {
+                    case 'pending':
+                        return 'badge-pending';
+                    case 'process':
+                        return 'badge-process';
+                    case 'done':
+                        return 'badge-done';
+                    case 'cancel':
+                        return 'badge-cancel';
+                    default:
+                        return 'badge-default';
+                }
             }
-        }
 
-        let isFetching = false;
+            function formatStatusText(status) {
+                return status.charAt(0).toUpperCase() + status.slice(1);
+            }
 
-        async function updateOrderStatus() {
-            if (isFetching) return;
+            function updateBadge(id, status) {
+                const badge = document.getElementById("order-status-" + id);
+                if (!badge) return;
 
-            isFetching = true;
-
-            try {
-                const response = await fetch(
-                    "{{ route('customer.orders.status.all') }}", {
-                        headers: {
-                            "Accept": "application/json",
-                            "X-Requested-With": "XMLHttpRequest"
-                        }
-                    }
+                badge.classList.remove(
+                    "badge-pending",
+                    "badge-process",
+                    "badge-done",
+                    "badge-cancel",
+                    "badge-default"
                 );
 
-                if (!response.ok) return;
-
-                const orders = await response.json();
-
-                orders.forEach(order => {
-                    const badge =
-                        document.getElementById(
-                            "order-status-" + order.id
-                        );
-
-                    if (!badge) return;
-
-                    const newClass =
-                        "order-badge " +
-                        getStatusClass(order.status);
-
-                    const newText =
-                        order.status.charAt(0).toUpperCase() +
-                        order.status.slice(1);
-
-                    if (badge.className !== newClass) {
-                        badge.className = newClass;
-                    }
-
-                    if (badge.innerText !== newText) {
-                        badge.innerText = newText;
-                    }
-                });
-            } catch (e) {
-                console.warn("Gagal update status", e);
-            } finally {
-                isFetching = false;
+                badge.classList.add(getStatusClass(status));
+                badge.innerText = formatStatusText(status);
             }
-        }
 
-        // jalan pertama kali
-        updateOrderStatus();
+            // =========================
+            // 🔥 WEBSOCKET (PRIMARY)
+            // =========================
+            const userId = {{ auth()->id() }};
 
-        // update setiap 5 detik
-        setInterval(updateOrderStatus, 5000);
+            Pusher.logToConsole = true;
+
+            const echo = new Echo({
+                broadcaster: 'pusher',
+                key: "{{ env('PUSHER_APP_KEY') }}",
+                cluster: "{{ env('PUSHER_APP_CLUSTER') }}",
+                forceTLS: true
+            });
+
+            echo.channel('user.' + userId)
+                .listen('OrderStatusUpdated', (e) => {
+
+                    console.log("REALTIME LIST:", e);
+
+                    updateBadge(e.id, e.status);
+
+                    Toast.fire({
+                        icon: 'info',
+                        title: 'Status pesanan diperbarui'
+                    });
+                });
+
+            // =========================
+            // 🔁 POLLING (FALLBACK)
+            // =========================
+            let isFetching = false;
+
+            async function updateOrderStatus() {
+                if (isFetching) return;
+
+                isFetching = true;
+
+                try {
+                    const response = await fetch(
+                        "{{ route('customer.orders.status.all') }}", {
+                            headers: {
+                                "Accept": "application/json",
+                                "X-Requested-With": "XMLHttpRequest"
+                            }
+                        }
+                    );
+
+                    if (!response.ok) return;
+
+                    const orders = await response.json();
+
+                    orders.forEach(order => {
+                        updateBadge(order.id, order.status);
+                    });
+
+                } catch (e) {
+                    console.warn("Polling gagal:", e);
+                } finally {
+                    isFetching = false;
+                }
+            }
+
+            // jalankan sekali
+            updateOrderStatus();
+
+            // fallback tiap 10 detik (tidak terlalu sering)
+            setInterval(updateOrderStatus, 10000);
+
+        });
     </script>
-@endsection
+@endpush

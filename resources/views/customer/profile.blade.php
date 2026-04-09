@@ -89,7 +89,7 @@
 @endsection
 
 
-@section('styles')
+@push('styles')
     <style>
         .profile-card {
             background: rgba(255, 255, 255, .05);
@@ -163,4 +163,4 @@
             cursor: not-allowed;
         }
     </style>
-@endsection
+@endpush

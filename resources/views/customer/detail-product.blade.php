@@ -52,19 +52,23 @@
                 <div class="col-lg-6">
                     <div class="td-detail-card">
 
-                        <h1 class="td-detail-title">{{ $product->name }}</h1>
+                        <div id="productDetailContent" class="d-none">
 
-                        <div class="mb-3">
-                            <span class="td-stock {{ $product->is_in_stock ? '' : 'is-out' }}">
-                                {{ $product->is_in_stock ? 'Stok tersedia: ' . $product->total_stock : 'Stok habis' }}
-                            </span>
-                        </div>
+                            <h1 class="td-detail-title">{{ $product->name }}</h1>
 
-                        {{-- Harga --}}
-                        <div class="td-detail-price mb-4">
-                            <div class="td-price-now">
-                                Rp {{ number_format($product->lowest_price ?? 0, 0, ',', '.') }}
+                            <div class="mb-3">
+                                <span class="td-stock {{ $product->is_in_stock ? '' : 'is-out' }}">
+                                    {{ $product->is_in_stock ? 'Stok tersedia: ' . $product->total_stock : 'Stok habis' }}
+                                </span>
                             </div>
+
+                            {{-- Harga --}}
+                            <div class="td-detail-price mb-4">
+                                <div class="td-price-now" id="productPrice">
+                                    Rp {{ number_format($product->lowest_price ?? 0, 0, ',', '.') }}
+                                </div>
+                            </div>
+
                         </div>
 
                         {{-- Branch Availability --}}
@@ -162,8 +166,40 @@
     </section>
 @endsection
 
+@push('styles')
+    <style>
+        #mainProductImg {
+            transition: opacity .2s ease;
+        }
 
-@section('scripts')
+        .td-branch-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .td-branch-item {
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid rgba(255, 255, 255, .08);
+            padding: 6px 12px;
+            border-radius: 8px;
+
+            color: #fff !important;
+            font-size: 13px;
+            font-weight: 500;
+
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .td-branch-item * {
+            color: #fff !important;
+        }
+    </style>
+@endpush
+
+@push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
 
@@ -175,44 +211,84 @@
             const form = document.getElementById('productActionForm');
             const buttons = form ? form.querySelectorAll('button') : [];
 
-            // Disable qty & tombol awal
+            const detail = document.getElementById("productDetailContent");
+            const priceEl = document.getElementById("productPrice");
+
+            // =========================
+            // INIT (disable awal)
+            // =========================
             if (qtyInput) qtyInput.disabled = true;
             buttons.forEach(btn => btn.disabled = true);
 
+            // =========================
+            // FORMAT RUPIAH
+            // =========================
+            function formatRupiah(angka) {
+                return new Intl.NumberFormat('id-ID').format(angka);
+            }
+
+            // =========================
+            // TAMPILKAN DETAIL
+            // =========================
+            function showDetail() {
+                if (detail && detail.classList.contains('d-none')) {
+                    detail.classList.remove('d-none');
+                }
+            }
+
+            // =========================
+            // VARIANT CHANGE
+            // =========================
             radios.forEach(radio => {
                 radio.addEventListener('change', function() {
 
                     const stock = parseInt(this.dataset.stock || 0);
+                    const price = parseInt(this.dataset.price || 0);
 
+                    // tampilkan detail saat variant dipilih
+                    showDetail();
+
+                    // update qty
                     if (qtyInput) {
                         qtyInput.value = 1;
                         qtyInput.max = stock;
                         qtyInput.disabled = stock <= 0;
                     }
 
+                    // update stok text
                     if (stockInfo) {
                         stockInfo.innerHTML = stock > 0 ?
                             'Stok tersedia: ' + stock :
                             'Stok habis';
                     }
 
+                    // update harga
+                    if (priceEl) {
+                        priceEl.innerText = "Rp " + formatRupiah(price);
+                    }
+
+                    // enable/disable tombol
                     buttons.forEach(btn => btn.disabled = stock <= 0);
                 });
             });
 
-            // ===============================
-            // 🔥 GLOBAL FUNCTIONS
-            // ===============================
+            // =========================
+            // GLOBAL FUNCTIONS
+            // =========================
 
             window.setMainImg = function(src) {
                 const mainImg = document.getElementById('mainProductImg');
                 if (!mainImg) return;
 
                 mainImg.style.opacity = 0;
+
                 setTimeout(() => {
                     mainImg.src = src;
                     mainImg.style.opacity = 1;
                 }, 150);
+
+                // 🔥 tampilkan detail saat gambar diklik
+                showDetail();
             }
 
             window.qtyMinus = function() {
@@ -287,36 +363,4 @@
 
         });
     </script>
-@endsection
-@section('styles')
-    <style>
-        #mainProductImg {
-            transition: opacity .2s ease;
-        }
-
-        .td-branch-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .td-branch-item {
-            background: rgba(255, 255, 255, .04);
-            border: 1px solid rgba(255, 255, 255, .08);
-            padding: 6px 12px;
-            border-radius: 8px;
-
-            color: #fff !important;
-            font-size: 13px;
-            font-weight: 500;
-
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .td-branch-item * {
-            color: #fff !important;
-        }
-    </style>
-@endsection
+@endpush

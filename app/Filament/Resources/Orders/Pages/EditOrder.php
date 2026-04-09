@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Orders\Pages;
 
+use App\Events\OrderStatusUpdated;
 use App\Filament\Resources\Orders\OrderResource;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;

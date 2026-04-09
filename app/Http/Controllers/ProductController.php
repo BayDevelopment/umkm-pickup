@@ -64,12 +64,11 @@ class ProductController extends Controller
                 $q->where('stock', '>', 0);
             })
 
-            // ambil lowest price dari variant yg stock > 0
+            // ambil harga termurah dari variant
             ->withMin(['variants' => function ($q) {
                 $q->where('stock', '>', 0);
             }], 'price')
 
-            // ✅ load branch lewat variants
             ->with([
                 'category',
                 'variants' => function ($q) {
@@ -78,10 +77,31 @@ class ProductController extends Controller
                 }
             ])
 
+            // 🔍 SEARCH
             ->when($request->search, function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%');
+            })
+
+            // 💰 MIN PRICE
+            ->when($request->min_price, function ($q) use ($request) {
+                $q->having('variants_min_price', '>=', $request->min_price);
+            })
+
+            // 💰 MAX PRICE
+            ->when($request->max_price, function ($q) use ($request) {
+                $q->having('variants_min_price', '<=', $request->max_price);
             });
 
+        // 🔽 SORTING
+        if ($request->sort == 'price_asc') {
+            $baseQuery->orderBy('variants_min_price', 'asc');
+        } elseif ($request->sort == 'price_desc') {
+            $baseQuery->orderBy('variants_min_price', 'desc');
+        } else {
+            $baseQuery->latest();
+        }
+
+        // 🔥 latest product (tidak ikut filter harga & sort)
         $latestProducts = null;
 
         if (!$request->search) {
@@ -92,7 +112,6 @@ class ProductController extends Controller
         }
 
         $products = (clone $baseQuery)
-            ->latest()
             ->paginate(12)
             ->withQueryString();
 

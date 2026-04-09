@@ -149,7 +149,7 @@
 @endsection
 
 
-@section('styles')
+@push('styles')
     <style>
         .td-dashboard-icon {
             width: 54px;
@@ -208,11 +208,9 @@
             max-height: 220px;
         }
     </style>
-@endsection
+@endpush
 
-
-
-@section('scripts')
+@push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
@@ -260,4 +258,4 @@
 
         });
     </script>
-@endsection
+@endpush

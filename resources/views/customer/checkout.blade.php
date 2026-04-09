@@ -243,7 +243,7 @@
     </section>
 @endsection
 
-@section('styles')
+@push('styles')
     <style>
         .checkout-page {
             background: linear-gradient(135deg, #0b1220, #0f172a);
@@ -440,9 +440,9 @@
             accent-color: #6366f1;
         }
     </style>
-@endsection
+@endpush
 
-@section('scripts')
+@push('scripts')
     <script>
         function toggleBranchSearch() {
             let box = document.getElementById('branch-search-box');
@@ -481,4 +481,4 @@
 
         });
     </script>
-@endsection
+@endpush

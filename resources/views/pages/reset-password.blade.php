@@ -23,22 +23,32 @@
 
                         </div>
 
-                        <div class="mb-3">
-
+                        <!-- PASSWORD BARU -->
+                        <div class="mb-3 position-relative">
                             <label>Password Baru</label>
 
-                            <input type="password" name="password" class="form-control" placeholder="Password baru"
-                                required>
+                            <input type="password" id="new_password" name="password" class="form-control pe-5"
+                                placeholder="Password baru" required>
 
+                            <!-- icon mata -->
+                            <span class="toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
+                                data-target="new_password" style="cursor:pointer;">
+                                <i class="fa-solid fa-eye"></i>
+                            </span>
                         </div>
 
-                        <div class="mb-3">
-
+                        <!-- KONFIRMASI PASSWORD -->
+                        <div class="mb-3 position-relative">
                             <label>Konfirmasi Password</label>
 
-                            <input type="password" name="password_confirmation" class="form-control"
-                                placeholder="Konfirmasi password" required>
+                            <input type="password" id="confirm_password" name="password_confirmation"
+                                class="form-control pe-5" placeholder="Konfirmasi password" required>
 
+                            <!-- icon mata -->
+                            <span class="toggle-password position-absolute top-50 end-0 translate-middle-y me-3"
+                                data-target="confirm_password" style="cursor:pointer;">
+                                <i class="fa-solid fa-eye"></i>
+                            </span>
                         </div>
 
                         <button class="btn btn-td w-100">
@@ -53,3 +63,22 @@
         </div>
     </div>
 @endsection
+@push('script')
+    <script>
+        document.querySelectorAll('.toggle-password').forEach(function(toggle) {
+            toggle.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                const icon = this.querySelector('i');
+
+                if (input.type === "password") {
+                    input.type = "text";
+                    icon.classList.replace("fa-eye", "fa-eye-slash");
+                } else {
+                    input.type = "password";
+                    icon.classList.replace("fa-eye-slash", "fa-eye");
+                }
+            });
+        });
+    </script>
+@endpush

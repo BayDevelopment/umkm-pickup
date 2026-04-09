@@ -130,7 +130,7 @@
         </div>
     </section>
 @endsection
-@section('styles')
+@push('styles')
     <style>
         .td-cart-card {
             background: rgba(255, 255, 255, .05);
@@ -197,8 +197,8 @@
             color: #fff;
         }
     </style>
-@endsection
-@section('scripts')
+@endpush
+@push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
 
@@ -327,4 +327,4 @@
 
         });
     </script>
-@endsection
+@endpush

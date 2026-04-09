@@ -181,7 +181,7 @@
         </div>
     </section>
 @endsection
-@section('styles')
+@push('styles')
     <style>
         .laporan-page {
             background: radial-gradient(circle at top, #111827, #0b1220);
@@ -424,4 +424,4 @@
             }
         }
     </style>
-@endsection
+@endpush

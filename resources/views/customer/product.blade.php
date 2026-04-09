@@ -21,14 +21,14 @@
 
                 <div class="col-md-2">
                     <label>Harga Min</label>
-                    <input type="number" name="min_price" value="{{ request('min_price') }}"
-                        class="form-control modern-input">
+                    <input type="number" name="min_price" min="0" value="{{ request('min_price') }}"
+                        class="form-control modern-input" placeholder="0">
                 </div>
 
                 <div class="col-md-2">
                     <label>Harga Max</label>
-                    <input type="number" name="max_price" value="{{ request('max_price') }}"
-                        class="form-control modern-input">
+                    <input type="number" name="max_price" min="0" value="{{ request('max_price') }}"
+                        class="form-control modern-input" placeholder="1000000">
                 </div>
 
                 <div class="col-md-2">
@@ -137,7 +137,7 @@
 
     </div>
 @endsection
-@section('styles')
+@push('styles')
     <style>
         .product-wrapper {
             padding: 100px 30px 40px;
@@ -281,4 +281,4 @@
                 this.form.submit();
             });
     </script>
-@endsection
+@endpush

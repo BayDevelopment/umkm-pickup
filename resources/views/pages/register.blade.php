@@ -63,10 +63,18 @@
                                 <span class="input-group-text td-input-icon">
                                     <i class="fa-solid fa-lock"></i>
                                 </span>
-                                <input type="password" name="password"
+
+                                <input type="password" id="password" name="password"
                                     class="form-control @error('password') is-invalid @enderror"
                                     placeholder="Minimal 8 karakter" required>
+
+                                <!-- tombol mata -->
+                                <span class="input-group-text toggle-password" data-target="password"
+                                    style="cursor:pointer;">
+                                    <i class="fa-solid fa-eye"></i>
+                                </span>
                             </div>
+
                             @error('password')
                                 <div class="invalid-feedback d-block">
                                     {{ $message }}
@@ -81,10 +89,18 @@
                                 <span class="input-group-text td-input-icon">
                                     <i class="fa-solid fa-lock"></i>
                                 </span>
-                                <input type="password" name="password_confirmation"
+
+                                <input type="password" id="password_confirmation" name="password_confirmation"
                                     class="form-control @error('password_confirmation') is-invalid @enderror"
                                     placeholder="Ulangi password" required>
+
+                                <!-- tombol mata -->
+                                <span class="input-group-text toggle-password" data-target="password_confirmation"
+                                    style="cursor:pointer;">
+                                    <i class="fa-solid fa-eye"></i>
+                                </span>
                             </div>
+
                             @error('password_confirmation')
                                 <div class="invalid-feedback d-block">
                                     {{ $message }}
@@ -114,3 +130,22 @@
         </div>
     </div>
 @endsection
+@push('script')
+    <script>
+        document.querySelectorAll('.toggle-password').forEach(function(toggle) {
+            toggle.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                const icon = this.querySelector('i');
+
+                if (input.type === "password") {
+                    input.type = "text";
+                    icon.classList.replace("fa-eye", "fa-eye-slash");
+                } else {
+                    input.type = "password";
+                    icon.classList.replace("fa-eye-slash", "fa-eye");
+                }
+            });
+        });
+    </script>
+@endpush

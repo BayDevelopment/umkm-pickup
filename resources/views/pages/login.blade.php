@@ -39,7 +39,14 @@
                                 <span class="input-group-text td-input-icon">
                                     <i class="fa-solid fa-lock"></i>
                                 </span>
-                                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+
+                                <input type="password" name="password" id="password" class="form-control"
+                                    placeholder="••••••••" required>
+
+                                <!-- tombol mata -->
+                                <span class="input-group-text" style="cursor:pointer;" onclick="togglePassword()">
+                                    <i class="fa-solid fa-eye" id="eyeIcon"></i>
+                                </span>
                             </div>
                         </div>
 
@@ -73,3 +80,21 @@
         </div>
     </div>
 @endsection
+@push('script')
+    <script>
+        function togglePassword() {
+            const input = document.getElementById("password");
+            const icon = document.getElementById("eyeIcon");
+
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove("fa-eye");
+                icon.classList.add("fa-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.remove("fa-eye-slash");
+                icon.classList.add("fa-eye");
+            }
+        }
+    </script>
+@endpush
