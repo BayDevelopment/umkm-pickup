@@ -155,7 +155,7 @@ Route::middleware(['auth', 'customer'])
             ->name('orders.status.all');
 
         Route::post(
-            '/orders/{order}/upload-proof',
+            '/orders/{order}/pay',
             [OrderController::class, 'uploadProof']
         )->name('orders.upload');
 
