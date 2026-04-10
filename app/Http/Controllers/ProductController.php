@@ -11,7 +11,7 @@ class ProductController extends Controller
     {
         $query = ProductModel::query()
             ->where('is_active', true)
-            ->whereHas('variants') // 🔥 hanya produk yg punya variant
+            ->whereHas('variants') // hanya produk yg punya variant
             ->with(['variants', 'category'])
             ->withMin('variants as lowest_price', 'price');
 
@@ -20,23 +20,37 @@ class ProductController extends Controller
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        // 💰 FILTER PRICE
-        if ($request->filled('min_price')) {
-            $query->where('lowest_price', '>=', $request->min_price);
+        // 💰 FILTER PRICE (FIXED)
+        if ($request->filled('min_price') || $request->filled('max_price')) {
+            $query->whereHas('variants', function ($q) use ($request) {
+
+                if ($request->filled('min_price')) {
+                    $q->where('price', '>=', $request->min_price);
+                }
+
+                if ($request->filled('max_price')) {
+                    $q->where('price', '<=', $request->max_price);
+                }
+            });
         }
 
-        if ($request->filled('max_price')) {
-            $query->where('lowest_price', '<=', $request->max_price);
-        }
-
-        // 🔄 SORT
+        // 🔄 SORT (FIXED + TAMBAHAN)
         switch ($request->sort) {
+
             case 'price_asc':
                 $query->orderBy('lowest_price', 'asc');
                 break;
 
             case 'price_desc':
                 $query->orderBy('lowest_price', 'desc');
+                break;
+
+            case 'name_asc':
+                $query->orderBy('name', 'asc');
+                break;
+
+            case 'name_desc':
+                $query->orderBy('name', 'desc');
                 break;
 
             default:

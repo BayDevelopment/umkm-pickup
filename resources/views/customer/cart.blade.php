@@ -41,6 +41,10 @@
                                             <div class="text-secondary small mb-2">
                                                 {{ $item->variant->color }}
                                                 {{ $item->variant->size ? '• ' . $item->variant->size : '' }}
+
+                                                @if ($item->variant->branch)
+                                                    • {{ $item->variant->branch->name }}
+                                                @endif
                                             </div>
 
                                             {{-- PRICE --}}

@@ -147,7 +147,7 @@
         </div>
     </section>
 @endsection
-@section('styles')
+@push('styles')
     <style>
         .td-cart-card {
             background: rgba(255, 255, 255, .05);
@@ -339,8 +339,8 @@
             }
         }
     </style>
-@endsection
-@section('scripts')
+@endpush
+@push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
 
@@ -452,4 +452,4 @@
             input.dispatchEvent(new Event('input'));
         }
     </script>
-@endsection
+@endpush

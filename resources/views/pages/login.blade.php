@@ -80,6 +80,7 @@
         </div>
     </div>
 @endsection
+
 @push('script')
     <script>
         function togglePassword() {

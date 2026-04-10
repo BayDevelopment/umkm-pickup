@@ -77,13 +77,9 @@
                                 <div class="td-variant-label mb-2">Tersedia di Cabang</div>
 
                                 <div class="td-branch-list">
-                                    @foreach ($product->variants->unique('branch_id') as $variant)
-                                        @if ($variant->branch)
-                                            <div class="td-branch-item">
-                                                📍 {{ $variant->branch->name }}
-                                            </div>
-                                        @endif
-                                    @endforeach
+                                    <div id="selectedBranch" class="td-branch-item">
+                                        📍 Pilih variant
+                                    </div>
                                 </div>
                             </div>
                         @endif
@@ -98,12 +94,11 @@
                                         <label class="td-pill">
                                             <input type="radio" name="variant_id" value="{{ $variant->id }}"
                                                 data-stock="{{ $variant->stock }}" data-price="{{ $variant->price }}"
-                                                {{ $variant->stock == 0 ? 'disabled' : '' }}>
+                                                data-branch="{{ $variant->branch->name ?? '-' }}">
 
                                             <span>
                                                 {{ $variant->color }}
                                                 {{ $variant->size ? '- ' . $variant->size : '' }}
-                                                (Rp {{ number_format($variant->price, 0, ',', '.') }})
                                                 @if ($variant->stock == 0)
                                                     - <span style="color:red;">Stok Habis</span>
                                                 @endif
@@ -214,22 +209,19 @@
             const detail = document.getElementById("productDetailContent");
             const priceEl = document.getElementById("productPrice");
 
+            // 🔥 NEW
+            const branchDisplay = document.getElementById('selectedBranch');
+
             // =========================
-            // INIT (disable awal)
+            // INIT
             // =========================
             if (qtyInput) qtyInput.disabled = true;
             buttons.forEach(btn => btn.disabled = true);
 
-            // =========================
-            // FORMAT RUPIAH
-            // =========================
             function formatRupiah(angka) {
                 return new Intl.NumberFormat('id-ID').format(angka);
             }
 
-            // =========================
-            // TAMPILKAN DETAIL
-            // =========================
             function showDetail() {
                 if (detail && detail.classList.contains('d-none')) {
                     detail.classList.remove('d-none');
@@ -237,7 +229,7 @@
             }
 
             // =========================
-            // VARIANT CHANGE
+            // VARIANT CHANGE (UPDATED)
             // =========================
             radios.forEach(radio => {
                 radio.addEventListener('change', function() {
@@ -245,29 +237,33 @@
                     const stock = parseInt(this.dataset.stock || 0);
                     const price = parseInt(this.dataset.price || 0);
 
-                    // tampilkan detail saat variant dipilih
+                    // 🔥 FIX BRANCH (SIMPLE & CLEAN)
+                    const branchDisplay = document.getElementById('selectedBranch');
+                    const branchName = this.dataset.branch || '-';
+
+                    if (branchDisplay) {
+                        branchDisplay.innerHTML = "📍 " + branchName;
+                    }
+
+                    // existing logic tetap
                     showDetail();
 
-                    // update qty
                     if (qtyInput) {
                         qtyInput.value = 1;
                         qtyInput.max = stock;
                         qtyInput.disabled = stock <= 0;
                     }
 
-                    // update stok text
                     if (stockInfo) {
                         stockInfo.innerHTML = stock > 0 ?
                             'Stok tersedia: ' + stock :
                             'Stok habis';
                     }
 
-                    // update harga
                     if (priceEl) {
                         priceEl.innerText = "Rp " + formatRupiah(price);
                     }
 
-                    // enable/disable tombol
                     buttons.forEach(btn => btn.disabled = stock <= 0);
                 });
             });
@@ -287,7 +283,6 @@
                     mainImg.style.opacity = 1;
                 }, 150);
 
-                // 🔥 tampilkan detail saat gambar diklik
                 showDetail();
             }
 
@@ -350,15 +345,13 @@
 
                 if (!validateProductSelection()) return;
 
-                const variantId = Number(getSelectedVariant().value);
-                const qty = Number(qtyInput.value) || 1;
+                const selected = getSelectedVariant();
 
-                const url = new URL("{{ route('customer.checkout') }}", window.location.origin);
+                document.getElementById('formVariantId').value = selected.value;
+                document.getElementById('formQty').value = qtyInput.value;
 
-                url.searchParams.set("variant_id", variantId);
-                url.searchParams.set("qty", qty);
-
-                window.location.href = url.toString();
+                form.action = "{{ route('customer.buy.now') }}";
+                form.submit();
             };
 
         });

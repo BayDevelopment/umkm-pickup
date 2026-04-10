@@ -20,42 +20,57 @@
 
         <!-- Filter Form -->
         <div class="td-card glass-card p-4 mb-5 shadow-lg">
-            <form method="GET" class="row g-3">
+            <form method="GET" class="row g-3 align-items-end">
+
+                {{-- SEARCH --}}
                 <div class="col-md-4 position-relative">
-                    <input type="text" name="search" value="{{ request('search') }}" class="form-control td-input ps-5"
-                        placeholder="Cari produk...">
+                    <input type="text" name="search" value="{{ request('search') }}" maxlength="100"
+                        class="form-control td-input ps-5" placeholder="Cari produk...">
                     <i class="fa-solid fa-search position-absolute top-50 start-3 translate-middle-y text-muted"></i>
                 </div>
 
+                {{-- MIN PRICE --}}
                 <div class="col-md-2">
-                    <input type="number" name="min_price" value="{{ request('min_price') }}" class="form-control td-input"
-                        placeholder="Harga Min">
+                    <input type="number" name="min_price" min="0" step="1000" value="{{ request('min_price') }}"
+                        class="form-control td-input" placeholder="Harga Min">
                 </div>
 
+                {{-- MAX PRICE --}}
                 <div class="col-md-2">
-                    <input type="number" name="max_price" value="{{ request('max_price') }}" class="form-control td-input"
-                        placeholder="Harga Max">
+                    <input type="number" name="max_price" min="0" step="1000" value="{{ request('max_price') }}"
+                        class="form-control td-input" placeholder="Harga Max">
                 </div>
 
+                {{-- SORT --}}
                 <div class="col-md-2">
                     <select name="sort" class="form-select td-input">
-                        <option value="">Urutkan: Terbaru</option>
-                        <option value="price_asc" {{ request('sort') == 'price_asc' ? 'selected' : '' }}>Harga Termurah
+                        <option value="">Terbaru</option>
+                        <option value="price_asc" {{ request('sort') == 'price_asc' ? 'selected' : '' }}>
+                            Harga Termurah
                         </option>
-                        <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>Harga Termahal
+                        <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>
+                            Harga Termahal
                         </option>
-                        <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>A-Z</option>
-                        <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>Z-A</option>
+                        <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>
+                            A-Z
+                        </option>
+                        <option value="name_desc" {{ request('sort') == 'name_desc' ? 'selected' : '' }}>
+                            Z-A
+                        </option>
                     </select>
                 </div>
 
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-td w-50">
-                        <i class="fa-solid fa-filter me-2"></i>Filter
+                {{-- BUTTON --}}
+                <div class="col-md-2 d-flex gap-2 justify-content-end">
+
+                    <button type="submit" class="btn btn-td btn-sm px-3">
+                        <i class="fa-solid fa-filter me-1"></i> Filter
                     </button>
-                    <a href="{{ route('products.index') }}" class="btn btn-outline-light w-50">
-                        <i class="fa-solid fa-undo me-2"></i>Reset
+
+                    <a href="{{ route('products.index') }}" class="btn btn-outline-light btn-sm px-3">
+                        <i class="fa-solid fa-rotate-left me-1"></i>
                     </a>
+
                 </div>
             </form>
         </div>
@@ -148,7 +163,7 @@
     </div>
 @endsection
 
-@section('styles')
+@push('styles')
     <style>
         .td-product-card {
             background: rgba(255, 255, 255, 0.03);
@@ -243,4 +258,4 @@
             }
         }
     </style>
-@endsection
+@endpush

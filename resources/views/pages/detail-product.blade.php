@@ -55,8 +55,8 @@
                         <h1 class="td-detail-title">{{ $product->name }}</h1>
 
                         <div class="mb-3">
-                            <span class="td-stock {{ $product->is_in_stock ? '' : 'is-out' }}">
-                                {{ $product->is_in_stock ? 'Stok tersedia: ' . $product->total_stock : 'Stok habis' }}
+                            <span id="stockInfoText" class="td-stock text-warning">
+                                Pilih variant terlebih dahulu
                             </span>
                         </div>
 
@@ -77,12 +77,13 @@
                                         <label class="td-pill">
                                             <input type="radio" name="variant_id" value="{{ $variant->id }}"
                                                 data-stock="{{ $variant->stock }}" data-price="{{ $variant->price }}"
+                                                data-color="{{ $variant->color }}" data-size="{{ $variant->size }}"
+                                                data-image="{{ $variant->image ? asset('storage/' . $variant->image) : asset('storage/' . $product->image[0]) }}"
                                                 {{ $variant->stock == 0 ? 'disabled' : '' }}>
 
                                             <span>
                                                 {{ $variant->color }}
                                                 {{ $variant->size ? '- ' . $variant->size : '' }}
-                                                (Rp {{ number_format($variant->price, 0, ',', '.') }})
                                                 @if ($variant->stock == 0)
                                                     - <span style="color:red;">Stok Habis</span>
                                                 @endif
@@ -145,8 +146,15 @@
     </section>
 @endsection
 
+@push('styles')
+    <style>
+        #mainProductImg {
+            transition: opacity .2s ease;
+        }
+    </style>
+@endpush
 
-@section('scripts')
+@push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
 
@@ -156,98 +164,112 @@
             const priceEl = document.getElementById('productPrice');
             const qtyInput = document.getElementById('qtyInput');
             const stockInfo = document.getElementById('stockInfo');
+            const stockInfoText = document.getElementById('stockInfoText');
+            const mainImg = document.getElementById('mainProductImg');
             const form = document.getElementById('productActionForm');
             const buttons = form ? form.querySelectorAll('button') : [];
 
             // ===============================
-            // 🔥 Helper Functions
+            // INIT
+            // ===============================
+            if (qtyInput) qtyInput.disabled = true;
+            buttons.forEach(btn => btn.disabled = true);
+
+            // ===============================
+            // HELPERS
             // ===============================
 
             function updatePrice(price) {
                 if (!priceEl) return;
-                priceEl.style.opacity = 0;
+                priceEl.textContent = 'Rp ' + Number(price).toLocaleString('id-ID');
+            }
+
+            function updateImage(src) {
+                if (!mainImg || !src) return;
+
+                mainImg.style.opacity = 0;
                 setTimeout(() => {
-                    priceEl.textContent = 'Rp ' + Number(price).toLocaleString('id-ID');
-                    priceEl.style.opacity = 1;
+                    mainImg.src = src + '?t=' + Date.now(); // anti cache
+                    mainImg.style.opacity = 1;
                 }, 100);
+            }
+
+            function updateStock(stock) {
+                if (stockInfo) {
+                    stockInfo.innerHTML = stock > 0 ?
+                        'Stok tersedia: ' + stock :
+                        '<span style="color:red">Stok habis</span>';
+                }
+
+                if (stockInfoText) {
+                    stockInfoText.innerHTML = stock > 0 ?
+                        'Stok tersedia' :
+                        'Stok habis';
+                }
+            }
+
+            function updateQty(stock) {
+                if (!qtyInput) return;
+
+                qtyInput.value = 1;
+                qtyInput.max = stock;
+                qtyInput.disabled = stock <= 0;
+            }
+
+            function toggleButtons(stock) {
+                buttons.forEach(btn => btn.disabled = stock <= 0);
+            }
+
+            function setActiveVariant(el) {
+                document.querySelectorAll('.td-pill').forEach(p => {
+                    p.classList.remove('active');
+                });
+
+                const parent = el.closest('.td-pill');
+                if (parent) parent.classList.add('active');
             }
 
             function getSelectedVariant() {
                 return document.querySelector('input[name="variant_id"]:checked');
             }
 
-            function validateProductSelection() {
-                const selected = getSelectedVariant();
+            // ===============================
+            // CORE (SINGLE SOURCE OF TRUTH)
+            // ===============================
+            function applyVariant(radio) {
+                const stock = parseInt(radio.dataset.stock || 0);
+                const price = parseFloat(radio.dataset.price || 0);
+                const image = radio.dataset.image;
 
-                if (!selected) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Variant belum dipilih',
-                        text: 'Silakan pilih variant terlebih dahulu.',
-                        confirmButtonColor: '#6366f1'
-                    });
-                    return false;
-                }
-
-                if (!qtyInput || qtyInput.disabled) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Jumlah tidak valid',
-                        text: 'Silakan pilih variant dengan stok tersedia.',
-                        confirmButtonColor: '#6366f1'
-                    });
-                    return false;
-                }
-
-                return true;
+                updatePrice(price);
+                updateStock(stock);
+                updateQty(stock);
+                updateImage(image);
+                toggleButtons(stock);
+                setActiveVariant(radio);
             }
 
             // ===============================
-            // 🔥 Initialize
+            // EVENT VARIANT
             // ===============================
-
-            if (qtyInput) qtyInput.disabled = true;
-            buttons.forEach(btn => btn.disabled = true);
-
             radios.forEach(radio => {
                 radio.addEventListener('change', function() {
-                    const stock = parseInt(this.dataset.stock || 0);
-                    const price = parseFloat(this.dataset.price || 0);
-
-                    // Update qty
-                    if (qtyInput) {
-                        qtyInput.value = 1;
-                        qtyInput.max = stock;
-                        qtyInput.disabled = stock <= 0;
-                    }
-
-                    // Update stock info
-                    if (stockInfo) {
-                        stockInfo.innerHTML = stock > 0 ? 'Stok tersedia: ' + stock : 'Stok habis';
-                    }
-
-                    // Enable/disable tombol
-                    buttons.forEach(btn => btn.disabled = stock <= 0);
-
-                    // Update harga
-                    updatePrice(price);
+                    applyVariant(this);
                 });
             });
 
             // ===============================
-            // 🔥 Global Functions
+            // AUTO SELECT
             // ===============================
-
-            window.setMainImg = function(src) {
-                const mainImg = document.getElementById('mainProductImg');
-                if (!mainImg) return;
-                mainImg.style.opacity = 0;
-                setTimeout(() => {
-                    mainImg.src = src;
-                    mainImg.style.opacity = 1;
-                }, 150);
+            const first = document.querySelector('input[name="variant_id"]:not(:disabled)');
+            if (first) {
+                first.checked = true;
+                applyVariant(first);
             }
 
+            // ===============================
+            // QTY
+            // ===============================
             window.qtyMinus = function() {
                 if (!qtyInput || qtyInput.disabled) return;
                 qtyInput.value = Math.max(1, parseInt(qtyInput.value || 1) - 1);
@@ -259,10 +281,20 @@
                 qtyInput.value = Math.min(max, parseInt(qtyInput.value || 1) + 1);
             }
 
+            // ===============================
+            // CART
+            // ===============================
             window.submitCart = function() {
-                if (!validateProductSelection()) return;
-
                 const selected = getSelectedVariant();
+
+                if (!selected) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Pilih variant dulu'
+                    });
+                    return;
+                }
+
                 document.getElementById('formVariantId').value = selected.value;
                 document.getElementById('formQty').value = qtyInput.value;
 
@@ -270,41 +302,69 @@
                 form.submit();
             }
 
+            // ===============================
+            // 🔥 BUY NOW (FINAL FIX)
+            // ===============================
             window.submitBuyNow = function() {
-                if (!validateProductSelection()) return;
 
-                if (!isLoggedIn) {
+                const selected = getSelectedVariant();
+
+                if (!selected) {
                     Swal.fire({
-                        icon: 'info',
-                        title: 'Login Diperlukan',
-                        text: 'Silakan login terlebih dahulu untuk melanjutkan pembelian.',
-                        confirmButtonColor: '#6366f1',
-                        confirmButtonText: 'Login Sekarang',
-                        showCancelButton: true,
-                        cancelButtonText: 'Nanti Saja'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            window.location.href = "{{ route('login') }}?redirect=checkout";
-                        }
+                        icon: 'warning',
+                        title: 'Variant belum dipilih',
+                        text: 'Silakan pilih variant terlebih dahulu.'
                     });
                     return;
                 }
 
-                const selected = getSelectedVariant();
-                document.getElementById('formVariantId').value = selected.value;
-                document.getElementById('formQty').value = qtyInput.value;
+                if (!qtyInput || qtyInput.disabled) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Stok tidak tersedia'
+                    });
+                    return;
+                }
 
-                form.action = "{{ route('customer.buy.now') }}";
-                form.submit();
+                Swal.fire({
+                    icon: 'question',
+                    title: 'Upss',
+                    text: 'Login untuk melakukan pembelian.',
+                    confirmButtonText: 'Login',
+                    cancelButtonText: 'Nanti saja',
+                    showCancelButton: true
+                }).then((result) => {
+
+                    if (!result.isConfirmed) return;
+
+                    // 🔥 CHECK LOGIN (FINAL)
+                    if (!isLoggedIn) {
+                        window.location.href = "{{ route('login') }}";
+                        return;
+                    }
+
+                    // 🔥 SUBMIT
+                    document.getElementById('formVariantId').value = selected.value;
+                    document.getElementById('formQty').value = qtyInput.value;
+
+                    form.action = "{{ route('customer.buy.now') }}";
+                    form.submit();
+                });
             }
 
         });
-    </script>
-@endsection
-@section('styles')
-    <style>
-        #mainProductImg {
-            transition: opacity .2s ease;
+
+        window.setMainImg = function(src) {
+            const mainImg = document.getElementById('mainProductImg');
+
+            if (!mainImg || !src) return;
+
+            mainImg.style.opacity = 0;
+
+            setTimeout(() => {
+                mainImg.src = src + '?t=' + Date.now(); // anti cache
+                mainImg.style.opacity = 1;
+            }, 100);
         }
-    </style>
-@endsection
+    </script>
+@endpush

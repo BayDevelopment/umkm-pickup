@@ -37,10 +37,10 @@ Route::prefix('cart')
             ->name('cart.index');
 
         Route::post('/add', [CartController::class, 'add'])
-            ->name('cart.add');
+            ->name('cart.add')->middleware('throttle:10,1');
 
         Route::post('/update/{id}', [CartController::class, 'update'])
-            ->name('cart.update');
+            ->name('cart.update')->middleware('throttle:10,1');
 
         Route::delete('/remove/{id}', [CartController::class, 'remove'])
             ->name('cart.remove');
@@ -136,6 +136,7 @@ Route::middleware(['auth', 'customer'])
 
         Route::get('/product', [ProductController::class, 'productsCustomer'])
             ->name('product');
+
         Route::get('/produk/{category}/{product}', [ProductController::class, 'show'])
             ->name('detail.produk');
 

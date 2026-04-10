@@ -12,7 +12,7 @@
         integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    @yield('styles')
+    @stack('styles')
 </head>
 
 <body class="td-layout">
@@ -25,7 +25,7 @@
     </main>
 
     @include('partials.footer')
-    @yield('scripts')
+    @stack('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         const Toast = Swal.mixin({
