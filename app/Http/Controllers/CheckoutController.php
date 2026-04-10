@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\OrderSuccessMail;
 use App\Models\BranchModel;
 use App\Models\CartModel;
 use App\Models\OrderItemModel;
@@ -11,6 +12,7 @@ use App\Models\ProductVariantModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class CheckoutController extends Controller
 {
@@ -39,7 +41,7 @@ class CheckoutController extends Controller
 
             if (!$variant) {
                 return redirect()
-                    ->route('customer.product.index')
+                    ->route('customer.product')
                     ->with('error', 'Variant tidak ditemukan');
             }
 
@@ -158,7 +160,7 @@ class CheckoutController extends Controller
 
         try {
 
-            DB::transaction(function () use ($request, $user) {
+            $order = DB::transaction(function () use ($request, $user) {
 
                 $totalPrice = 0;
 
@@ -166,28 +168,19 @@ class CheckoutController extends Controller
                     $request->payment_method_id
                 );
 
-                /*
-            |--------------------------------------------------------------------------
-            | VALIDASI BRANCH HARUS PUNYA PRODUCT
-            |--------------------------------------------------------------------------
-            */
-
                 $branchValid = ProductVariantModel::where('branch_id', $request->branch_id)
                     ->where('stock', '>', 0)
                     ->exists();
 
                 if (!$branchValid) {
-
-                    throw new \Exception(
-                        'Cabang tidak memiliki produk tersedia'
-                    );
+                    throw new \Exception('Cabang tidak memiliki produk tersedia');
                 }
 
                 /*
-            |--------------------------------------------------------------------------
-            | BUY NOW MODE
-            |--------------------------------------------------------------------------
-            */
+                |------------------------------------------------------------------
+                | BUY NOW
+                |------------------------------------------------------------------
+                */
                 if ($request->filled('variant_id') && $request->filled('qty')) {
 
                     $variant = ProductVariantModel::lockForUpdate()
@@ -196,53 +189,35 @@ class CheckoutController extends Controller
                         ->findOrFail($request->variant_id);
 
                     if ($variant->stock < $request->qty) {
-
                         throw new \Exception(
-                            'Stok tidak cukup untuk ' .
-                                $variant->product->name
+                            'Stok tidak cukup untuk ' . $variant->product->name
                         );
                     }
 
                     $totalPrice = $variant->price * $request->qty;
 
                     $order = OrderModel::create([
-
                         'user_id' => $user->id,
-
                         'branch_id' => $request->branch_id,
-
                         'payment_method_id' => $payment->id,
-
                         'total_price' => $totalPrice,
-
                         'bank_name' => $payment->bank_name,
                         'bank_account_number' => $payment->account_number,
                         'bank_account_name' => $payment->account_name,
-
                         'payment_status' => 'pending',
                         'status' => 'pending',
-
                         'note' => $request->note
                     ]);
 
                     OrderItemModel::create([
-
                         'order_id' => $order->id,
-
                         'product_variant_id' => $variant->id,
-
                         'quantity' => $request->qty,
-
                         'price' => $variant->price,
-
                         'subtotal' => $totalPrice,
-
                         'product_name' => $variant->product->name,
-
                         'variant_sku' => $variant->sku,
-
                         'variant_color' => $variant->color,
-
                         'variant_size' => $variant->size,
                     ]);
 
@@ -250,14 +225,10 @@ class CheckoutController extends Controller
                 }
 
                 /*
-            |--------------------------------------------------------------------------
-            | CART MODE
-            |--------------------------------------------------------------------------
-            */ /*
-|--------------------------------------------------------------------------
-| CART MODE
-|--------------------------------------------------------------------------
-*/ else {
+                |------------------------------------------------------------------
+                | CART MODE
+                |------------------------------------------------------------------
+                */ else {
 
                     $cart = CartModel::with(['items.variant.product'])
                         ->where('user_id', $user->id)
@@ -267,56 +238,16 @@ class CheckoutController extends Controller
                         throw new \Exception('Keranjang kosong');
                     }
 
-                    /*
-    |--------------------------------------------------------------------------
-    | VALIDASI: semua produk harus milik cabang yang dipilih
-    |--------------------------------------------------------------------------
-    */
-
-                    $invalidProducts = [];
-
-                    foreach ($cart->items as $item) {
-
-                        $exists = ProductVariantModel::where('id', $item->variant_id)
-                            ->where('branch_id', $request->branch_id)
-                            ->exists();
-
-                        if (!$exists) {
-                            $invalidProducts[] = $item->variant->product->name;
-                        }
-                    }
-
-                    if (!empty($invalidProducts)) {
-
-                        throw new \Exception(
-                            'Produk berikut tidak tersedia di cabang yang dipilih: '
-                                . implode(', ', $invalidProducts)
-                        );
-                    }
-
-                    /*
-    |--------------------------------------------------------------------------
-    | CREATE ORDER
-    |--------------------------------------------------------------------------
-    */
-
                     $order = OrderModel::create([
-
                         'user_id' => $user->id,
-
                         'branch_id' => $request->branch_id,
-
                         'payment_method_id' => $payment->id,
-
                         'total_price' => 0,
-
                         'bank_name' => $payment->bank_name,
                         'bank_account_number' => $payment->account_number,
                         'bank_account_name' => $payment->account_name,
-
                         'payment_status' => 'pending',
                         'status' => 'pending',
-
                         'note' => $request->note
                     ]);
 
@@ -327,39 +258,26 @@ class CheckoutController extends Controller
                             ->where('branch_id', $request->branch_id)
                             ->find($item->variant_id);
 
-                        if (!$variant) {
-                            continue;
-                        }
+                        if (!$variant) continue;
 
                         if ($variant->stock < $item->qty) {
-
                             throw new \Exception(
                                 'Stok tidak cukup untuk ' . $variant->product->name
                             );
                         }
 
                         $subtotal = $variant->price * $item->qty;
-
                         $totalPrice += $subtotal;
 
                         OrderItemModel::create([
-
                             'order_id' => $order->id,
-
                             'product_variant_id' => $variant->id,
-
                             'quantity' => $item->qty,
-
                             'price' => $variant->price,
-
                             'subtotal' => $subtotal,
-
                             'product_name' => $variant->product->name,
-
                             'variant_sku' => $variant->sku,
-
                             'variant_color' => $variant->color,
-
                             'variant_size' => $variant->size,
                         ]);
 
@@ -372,7 +290,12 @@ class CheckoutController extends Controller
 
                     $cart->items()->delete();
                 }
+
+                return $order; // ✅ INI KUNCI NYA
             });
+
+            // ✅ kirim email DI SINI (AMAN)
+            Mail::to($user->email)->send(new OrderSuccessMail($order));
 
             return redirect()
                 ->route('customer.orders')

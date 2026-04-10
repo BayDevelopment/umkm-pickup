@@ -63,10 +63,10 @@ class OrdersTable
                     ->sortable(),
 
                 ImageColumn::make('payment_proof')
-                    ->label('Bukti Transfer')
-                    ->disk('public')
+                    ->getStateUsing(fn($record) => asset('storage/' . $record->payment_proof))
                     ->circular()
                     ->width(50),
+
                 TextColumn::make('created_at')
                     ->label('Tanggal')
                     ->dateTime('d M Y H:i')
@@ -123,10 +123,13 @@ class OrdersTable
                         ->modalDescription('Data akan dihapus permanen dan tidak bisa dikembalikan.')
                         ->successNotificationTitle('Data berhasil dihapus permanen.')
                         ->visible(fn($record) => $record->trashed()),
+
                     Action::make('view_payment_proof')
                         ->label('Lihat Bukti')
                         ->icon('heroicon-o-eye')
                         ->modalHeading('Bukti Transfer')
+                        ->modalSubmitAction(false) // ⛔ hapus tombol Kirim
+                        ->modalCancelActionLabel('Tutup') // optional ganti label Batal
                         ->modalContent(
                             fn($record) => $record->payment_proof
                                 ? new HtmlString('<img src="' . asset('storage/' . $record->payment_proof) . '" class="w-full h-auto rounded shadow-lg">')

@@ -147,160 +147,150 @@
 
 
             {{-- DATA REKENING --}}
-            @if ($order->payment_status === 'pending')
-                <div class="glass-card mb-4">
+            <div id="payment-wrapper">
 
-                    <h6 class="section-title">
-                        <i class="fa-solid fa-building-columns"></i>
-                        Informasi Rekening
-                    </h6>
+                @if ($order->payment_status === 'pending')
+                    <div id="payment-section" class="glass-card mb-4">
 
-                    <div class="rekening-grid">
-                        <div class="rekening-item">
-                            <div class="label">Bank</div>
-                            <div class="value">{{ $order->bank_name }}</div>
-                        </div>
+                        <h6 class="section-title">
+                            <i class="fa-solid fa-building-columns"></i>
+                            Informasi Rekening
+                        </h6>
 
-                        <div class="rekening-item">
-                            <div class="label">Nomor Rekening</div>
-                            <div class="value" id="rekeningNumber">
-                                {{ $order->bank_account_number }}
+                        <div class="rekening-grid">
+                            <div class="rekening-item">
+                                <div class="label">Bank</div>
+                                <div class="value">{{ $order->bank_name }}</div>
+                            </div>
+
+                            <div class="rekening-item">
+                                <div class="label">Nomor Rekening</div>
+                                <div class="value" id="rekeningNumber">
+                                    {{ $order->bank_account_number }}
+                                </div>
+                            </div>
+
+                            <div class="rekening-item">
+                                <div class="label">Atas Nama</div>
+                                <div class="value">{{ $order->bank_account_name }}</div>
                             </div>
                         </div>
 
-                        <div class="rekening-item">
-                            <div class="label">Atas Nama</div>
-                            <div class="value">{{ $order->bank_account_name }}</div>
-                        </div>
-                    </div>
-
-                    <div class="mt-3">
-                        <button type="button" class="btn-copy"
-                            onclick="copyRekening('{{ $order->bank_account_number }}', this)">
-                            <i class="fa-solid fa-copy"></i>
-                            Copy Nomor Rekening
-                        </button>
-                    </div>
-
-                    <div class="warning-note mt-3">
-                        * Pastikan nominal transfer sesuai total pesanan - ( Jpg,Png - 1MB ).
-                    </div>
-
-                    {{-- UPLOAD --}}
-                    @if ($order->payment_status === 'pending' && !$order->payment_proof)
-                        {{-- FORM UPLOAD --}}
-                        <form method="POST" action="{{ route('customer.orders.upload', $order->id) }}"
-                            enctype="multipart/form-data" class="upload-box mt-4">
-
-                            @csrf
-
-                            <div class="file-upload-wrapper">
-
-                                <input type="file" name="payment_proof" id="paymentProof-{{ $order->id }}"
-                                    class="file-input" accept="image/*" required>
-
-                                <label for="paymentProof-{{ $order->id }}" class="file-label">
-
-                                    <i class="fa-solid fa-cloud-arrow-up"></i>
-
-                                    <span class="file-name-text">
-                                        Pilih Bukti Transfer
-                                    </span>
-
-                                </label>
-
-                            </div>
-
-                            <button type="submit" class="btn-primary mt-3 w-100">
-
-                                <i class="fa-solid fa-paper-plane"></i>
-
-                                Upload Bukti Transfer
-
+                        <div class="mt-3">
+                            <button type="button" class="btn-copy"
+                                onclick="copyRekening('{{ $order->bank_account_number }}', this)">
+                                <i class="fa-solid fa-copy"></i>
+                                Copy Nomor Rekening
                             </button>
+                        </div>
 
-                        </form>
-                    @else
-                        {{-- STATUS SUDAH UPLOAD --}}
-                        <div class="upload-success-box mt-4">
+                        <div class="warning-note mt-3">
+                            * Pastikan nominal transfer sesuai total pesanan - ( Jpg,Png - 1MB ).
+                        </div>
 
-                            <div class="upload-success-left">
+                        {{-- FORM --}}
+                        @if ($order->payment_status === 'pending' && !$order->payment_proof)
+                            <div id="upload-form">
+                                <form method="POST" action="{{ route('customer.orders.upload', $order->id) }}"
+                                    enctype="multipart/form-data" class="upload-box mt-4">
 
-                                <div class="upload-success-icon">
-                                    <i class="fa-solid fa-circle-check"></i>
-                                </div>
+                                    @csrf
 
+                                    <div class="file-upload-wrapper">
+                                        <input type="file" name="payment_proof" id="paymentProof-{{ $order->id }}"
+                                            class="file-input @error('payment_proof') is-invalid @enderror"
+                                            accept="image/png, image/jpeg" required>
+
+                                        <label for="paymentProof-{{ $order->id }}" class="file-label">
+                                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                                            <span class="file-name-text">Pilih Bukti Transfer</span>
+                                        </label>
+                                    </div>
+
+                                    {{-- 🔴 ERROR MESSAGE --}}
+                                    @error('payment_proof')
+                                        <div class="text-danger mt-2" style="font-size: 13px;">
+                                            <i class="fa-solid fa-circle-exclamation"></i>
+                                            {{ $message }}
+                                        </div>
+                                    @enderror
+
+                                    <button type="submit" class="btn-primary mt-3 w-100">
+                                        <i class="fa-solid fa-paper-plane"></i>
+                                        Upload Bukti Transfer
+                                    </button>
+
+                                </form>
                             </div>
+                        @else
+                            <div id="upload-success" class="upload-success-box mt-4">
 
-                            <div class="upload-success-content">
-
-                                <div class="upload-success-title">
-                                    Bukti transfer telah diupload
+                                <div class="upload-success-left">
+                                    <div class="upload-success-icon">
+                                        <i class="fa-solid fa-circle-check"></i>
+                                    </div>
                                 </div>
 
-                                <div class="upload-success-desc">
+                                <div class="upload-success-content">
 
-                                    @if ($order->payment_status === 'pending')
-                                        Sedang diverifikasi oleh admin.
-                                    @elseif ($order->payment_status === 'paid')
-                                        Pembayaran berhasil dikonfirmasi. Pesanan sedang diproses.
-                                    @elseif ($order->payment_status === 'rejected')
-                                        Bukti transfer ditolak. Silakan upload ulang.
+                                    <div class="upload-success-title">
+                                        Bukti transfer telah diupload
+                                    </div>
+
+                                    <div class="upload-success-desc" id="upload-desc">
+
+                                        @if ($order->payment_status === 'pending')
+                                            Sedang diverifikasi oleh admin.
+                                        @elseif ($order->payment_status === 'paid')
+                                            Pembayaran berhasil dikonfirmasi. Pesanan sedang diproses.
+                                        @elseif ($order->payment_status === 'rejected')
+                                            Bukti transfer ditolak. Silakan upload ulang.
+                                        @endif
+
+                                    </div>
+
+                                    @if ($order->payment_proof)
+                                        <a href="{{ asset('storage/' . $order->payment_proof) }}" target="_blank"
+                                            class="btn-preview-proof mt-2">
+                                            <i class="fa-solid fa-image"></i>
+                                            Lihat Bukti Transfer
+                                        </a>
                                     @endif
 
                                 </div>
 
-                                {{-- preview --}}
-                                @if ($order->payment_proof)
-                                    <a href="{{ asset('storage/' . $order->payment_proof) }}" target="_blank"
-                                        class="btn-preview-proof mt-2">
+                                <div class="upload-success-badge">
+                                    @switch($order->payment_status)
+                                        @case('pending')
+                                            <span class="badge badge-warning">
+                                                <i class="fa-solid fa-clock"></i>
+                                                Menunggu Verifikasi
+                                            </span>
+                                        @break
 
-                                        <i class="fa-solid fa-image"></i>
-                                        Lihat Bukti Transfer
+                                        @case('paid')
+                                            <span class="badge badge-success">
+                                                <i class="fa-solid fa-check"></i>
+                                                Berhasil
+                                            </span>
+                                        @break
 
-                                    </a>
-                                @endif
-
-                            </div>
-
-                            <div class="upload-success-badge">
-
-                                @switch($order->payment_status)
-                                    @case('pending')
-                                        <span class="badge badge-warning">
-                                            <i class="fa-solid fa-clock"></i>
-                                            Menunggu Verifikasi
-                                        </span>
-                                    @break
-
-                                    @case('paid')
-                                        <span class="badge badge-success">
-                                            <i class="fa-solid fa-check"></i>
-                                            Berhasil
-                                        </span>
-                                    @break
-
-                                    @case('rejected')
-                                        <span class="badge badge-danger">
-                                            <i class="fa-solid fa-xmark"></i>
-                                            Ditolak
-                                        </span>
-                                    @break
-
-                                    @default
-                                        <span class="badge badge-info">
-                                            <i class="fa-solid fa-check"></i>
-                                            Uploaded
-                                        </span>
-                                @endswitch
+                                        @case('rejected')
+                                            <span class="badge badge-danger">
+                                                <i class="fa-solid fa-xmark"></i>
+                                                Ditolak
+                                            </span>
+                                        @break
+                                    @endswitch
+                                </div>
 
                             </div>
+                        @endif
 
-                        </div>
-                    @endif
+                    </div>
+                @endif
 
-                </div>
-            @endif
+            </div>
 
 
             {{-- ITEMS --}}
@@ -1150,8 +1140,8 @@
             // =========================
             document.querySelectorAll('.file-input').forEach(input => {
                 input.addEventListener('change', function() {
-                    const label = this.nextElementSibling.querySelector('.file-name-text');
-                    if (this.files.length > 0) {
+                    const label = this.nextElementSibling?.querySelector('.file-name-text');
+                    if (this.files.length > 0 && label) {
                         label.textContent = this.files[0].name;
                     }
                 });
@@ -1166,10 +1156,8 @@
             const orderId = orderContainer.dataset.orderId;
             if (!orderId) return;
 
-            console.log("ORDER ID:", orderId);
-
             // =========================
-            // ORDER STATUS
+            // STATUS HELPER
             // =========================
             function getOrderStatusClass(status) {
                 switch (status) {
@@ -1197,13 +1185,10 @@
                     case "cancel":
                         return "Pesanan Dibatalkan";
                     default:
-                        return "Pesanan Menunggu Konfirmasi"; // fallback aman
+                        return "Pesanan Menunggu Konfirmasi";
                 }
             }
 
-            // =========================
-            // PAYMENT STATUS
-            // =========================
             function getPaymentStatusClass(status) {
                 switch (status) {
                     case "pending":
@@ -1226,7 +1211,7 @@
                     case "rejected":
                         return "Pembayaran Ditolak";
                     default:
-                        return "Pembayaran Menunggu Verifikasi"; // fallback aman
+                        return "Pembayaran Menunggu Verifikasi";
                 }
             }
 
@@ -1257,15 +1242,53 @@
             }
 
             // =========================
+            // 🔥 UPDATE UI TAMBAHAN (REKENING & UPLOAD)
+            // =========================
+            function updatePaymentUI(paymentStatus) {
+
+                const paymentSection = document.getElementById('payment-section');
+                const uploadForm = document.getElementById('upload-form');
+                const uploadSuccess = document.getElementById('upload-success');
+                const uploadDesc = document.getElementById('upload-desc');
+
+                if (!paymentSection) return;
+
+                // ❌ sembunyikan rekening kalau sudah bukan pending
+                if (paymentStatus !== 'pending') {
+                    paymentSection.style.display = 'none';
+                } else {
+                    paymentSection.style.display = 'block';
+                }
+
+                // 🔥 kontrol upload / success
+                if (paymentStatus === 'pending') {
+                    if (uploadForm) uploadForm.style.display = 'block';
+                    if (uploadSuccess) uploadSuccess.style.display = 'none';
+                } else {
+                    if (uploadForm) uploadForm.style.display = 'none';
+                    if (uploadSuccess) uploadSuccess.style.display = 'block';
+
+                    if (uploadDesc) {
+                        if (paymentStatus === 'paid') {
+                            uploadDesc.innerText = 'Pembayaran berhasil dikonfirmasi. Pesanan sedang diproses.';
+                        } else if (paymentStatus === 'rejected') {
+                            uploadDesc.innerText = 'Bukti transfer ditolak. Silakan upload ulang.';
+                        }
+                    }
+                }
+            }
+
+            // =========================
             // FULL UI UPDATE
             // =========================
             function updateOrderUI(e) {
 
-                // badge order
+                // badge
                 updateBadge("order-status-badge", "order-status-text", e.status, 'order');
-
-                // badge payment
                 updateBadge("payment-status-badge", "payment-status-text", e.payment_status, 'payment');
+
+                // 🔥 tambahan UI
+                updatePaymentUI(e.payment_status);
 
                 // =========================
                 // DESCRIPTION
@@ -1309,7 +1332,7 @@
                 if (e.status === "done") {
                     container.insertAdjacentHTML('beforeend', `
                 <div class="order-info-box info-done">
-                    Terimakasih sudah belanja ditoko kami dengan aplikasi ini 🎉
+                    Terimakasih sudah belanja ditoko kami 🎉
                 </div>
             `);
                 }
@@ -1333,24 +1356,15 @@
             echo.channel('order.' + orderId)
                 .listen('.OrderStatusUpdated', (e) => {
 
-                    console.log("REALTIME MASUK:", e);
+                    if (!e.status || !e.payment_status) return;
 
-                    // VALIDASI DATA
-                    if (!e.status || !e.payment_status) {
-                        console.warn("DATA REALTIME TIDAK LENGKAP:", e);
-                        return;
-                    }
-
-                    // NORMALISASI
                     e.status = e.status.toLowerCase();
                     e.payment_status = e.payment_status.toLowerCase();
 
-                    // UPDATE UI
                     requestAnimationFrame(() => {
                         updateOrderUI(e);
                     });
 
-                    // TOAST
                     Toast.fire({
                         icon: 'info',
                         title: 'Status pesanan diperbarui'

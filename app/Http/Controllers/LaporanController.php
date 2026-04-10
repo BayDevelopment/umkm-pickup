@@ -11,35 +11,49 @@ class LaporanController extends Controller
 {
     public function index(Request $request)
     {
-        $query = OrderModel::where('user_id', Auth::id());
+        $baseQuery = OrderModel::query()
+            ->where('user_id', Auth::id());
 
-        // Optional filter tanggal
-        if ($request->start_date) {
-            $query->whereDate('created_at', '>=', $request->start_date);
+        // ================= FILTER =================
+
+        // 📅 Filter tanggal (FIX: samakan dengan view)
+        if ($request->date_from) {
+            $baseQuery->whereDate('created_at', '>=', $request->date_from);
         }
 
-        if ($request->end_date) {
-            $query->whereDate('created_at', '<=', $request->end_date);
+        if ($request->date_to) {
+            $baseQuery->whereDate('created_at', '<=', $request->date_to);
         }
-        // search bebas (optional)
+
+        // 🔍 Search (AMAN: pakai grouping)
         if ($request->search) {
-            $query->where('invoice', 'like', '%' . $request->search . '%')
-                ->orWhere('customer_name', 'like', '%' . $request->search . '%');
+            $baseQuery->where(function ($q) use ($request) {
+                $q->where('invoice', 'like', '%' . $request->search . '%')
+                    ->orWhereHas('branch', function ($q2) use ($request) {
+                        $q2->where('name', 'like', '%' . $request->search . '%');
+                    });
+            });
         }
 
-        // filter status done
-        if ($request->status == 'done') {
-            $query->where('status', 'done');
+        // 📊 Status (FIX: semua status bisa)
+        if ($request->status) {
+            $baseQuery->where('status', $request->status);
         }
 
-        $orders = $query->latest()->get();
+        // ================= DATA =================
 
-        // Statistik
-        $totalOrders  = $orders->count();
-        $totalDone    = $orders->where('status', 'done')->count();
-        $totalProcess = $orders->where('status', 'process')->count();
-        $totalPending = $orders->where('status', 'pending')->count();
-        $totalSpent   = $orders->where('status', 'done')->sum('total_price');
+        $orders = (clone $baseQuery)
+            ->latest()
+            ->paginate(10)
+            ->withQueryString(); // 🔥 biar filter tetap nempel
+
+        // ================= STATISTIK (OPTIMIZED) =================
+
+        $totalOrders  = (clone $baseQuery)->count();
+        $totalDone    = (clone $baseQuery)->where('status', 'done')->count();
+        $totalProcess = (clone $baseQuery)->where('status', 'process')->count();
+        $totalPending = (clone $baseQuery)->where('status', 'pending')->count();
+        $totalSpent   = (clone $baseQuery)->where('status', 'done')->sum('total_price');
 
         return view('customer.laporan', compact(
             'orders',

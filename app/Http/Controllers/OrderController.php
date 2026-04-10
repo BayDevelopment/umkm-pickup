@@ -95,31 +95,47 @@ class OrderController extends Controller
     {
         $this->authorizeOrder($order);
 
-        // Hanya boleh upload kalau pending
+        // ❗ hanya boleh upload jika masih pending
         if ($order->payment_status !== 'pending') {
-            return back()->withErrors(['payment' => 'Bukti sudah diupload atau pesanan tidak bisa diubah lagi.']);
+            return back()->withErrors([
+                'payment' => 'Pesanan tidak bisa diubah lagi.'
+            ]);
         }
 
+        // ❗ cegah upload ulang
+        if ($order->payment_proof) {
+            return back()->withErrors([
+                'payment' => 'Bukti transfer sudah diupload dan tidak dapat diganti.'
+            ]);
+        }
+
+        // ✅ VALIDASI
         $request->validate([
-            'payment_proof' => 'required|image|mimes:jpeg,png,jpg|max:2048', // naikkan ke 2MB, lebih nyaman
+            'payment_proof' => 'required|image|mimes:jpg,jpeg,png|max:1024',
+        ], [
+            'payment_proof.required' => 'Bukti transfer wajib diupload.',
+            'payment_proof.image' => 'File harus berupa gambar.',
+            'payment_proof.mimes' => 'Format harus JPG atau PNG.',
+            'payment_proof.max' => 'Ukuran maksimal 1MB.',
         ]);
 
         try {
-            // Hapus bukti lama kalau ada
-            if ($order->payment_proof && Storage::disk('public')->exists($order->payment_proof)) {
-                Storage::disk('public')->delete($order->payment_proof);
-            }
 
+            // 🔥 simpan file (tanpa hapus lama)
             $path = $request->file('payment_proof')->store('payment-proofs', 'public');
 
+            // 🔥 update order
             $order->update([
-                'payment_proof'   => $path,
-                'payment_status'  => 'pending',
+                'payment_proof'  => $path,
+                'payment_status' => 'pending', // tetap pending → menunggu admin
             ]);
 
-            return back()->with('success', 'Bukti transfer berhasil diupload. Admin akan segera memverifikasi.');
+            return back()->with('success', 'Bukti transfer berhasil diupload. Menunggu verifikasi admin.');
         } catch (\Exception $e) {
-            return back()->withErrors(['payment' => 'Gagal upload bukti: ' . $e->getMessage()]);
+
+            return back()->withErrors([
+                'payment' => 'Gagal upload bukti: ' . $e->getMessage()
+            ]);
         }
     }
 

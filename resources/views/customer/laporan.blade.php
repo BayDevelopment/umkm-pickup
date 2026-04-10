@@ -43,25 +43,13 @@
                     <div class="col-md-3">
                         <label class="filter-label">Status</label>
                         <select name="status" class="form-select modern-input">
-
                             <option value="">Semua</option>
 
-                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>
-                                Pending
-                            </option>
-
-                            <option value="process" {{ request('status') == 'process' ? 'selected' : '' }}>
-                                Process
-                            </option>
-
-                            <option value="done" {{ request('status') == 'done' ? 'selected' : '' }}>
-                                Done
-                            </option>
-
-                            <option value="cancel" {{ request('status') == 'cancel' ? 'selected' : '' }}>
-                                Cancel
-                            </option>
-
+                            @foreach (['pending', 'process', 'done', 'cancel'] as $status)
+                                <option value="{{ $status }}" {{ request('status') == $status ? 'selected' : '' }}>
+                                    {{ ucfirst($status) }}
+                                </option>
+                            @endforeach
                         </select>
                     </div>
 
@@ -73,11 +61,10 @@
                         </button>
                     </div>
 
-                    {{-- EXPORT PDF (ikut filter aktif) --}}
+                    {{-- EXPORT PDF --}}
                     <div class="col-md-6">
                         <a href="{{ route('customer.laporan.export', request()->query()) }}"
                             class="btn-export w-100 text-center d-block">
-
                             <i class="fa-solid fa-file-pdf"></i>
                             Export PDF
                         </a>
@@ -91,9 +78,6 @@
 
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-card">
-                        <div class="stat-icon bg-blue">
-                            <i class="fa-solid fa-receipt"></i>
-                        </div>
                         <p>Total Order</p>
                         <h4>{{ $totalOrders }}</h4>
                     </div>
@@ -101,9 +85,6 @@
 
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-card">
-                        <div class="stat-icon bg-green">
-                            <i class="fa-solid fa-circle-check"></i>
-                        </div>
                         <p>Order Selesai</p>
                         <h4>{{ $totalDone }}</h4>
                     </div>
@@ -111,9 +92,6 @@
 
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-card">
-                        <div class="stat-icon bg-orange">
-                            <i class="fa-solid fa-truck-fast"></i>
-                        </div>
                         <p>Sedang Diproses</p>
                         <h4>{{ $totalProcess }}</h4>
                     </div>
@@ -121,9 +99,6 @@
 
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-card highlight">
-                        <div class="stat-icon bg-purple">
-                            <i class="fa-solid fa-wallet"></i>
-                        </div>
                         <p>Total Belanja</p>
                         <h4>Rp {{ number_format($totalSpent, 0, ',', '.') }}</h4>
                     </div>
@@ -144,6 +119,7 @@
                             </tr>
                         </thead>
                         <tbody>
+
                             @forelse($orders as $order)
                                 @php
                                     $badge = match ($order->status) {
@@ -154,28 +130,43 @@
                                         default => 'badge-default',
                                     };
                                 @endphp
+
                                 <tr>
-                                    <td class="fw-semibold">#{{ $order->id }}</td>
-                                    <td>{{ $order->created_at->format('d M Y') }}</td>
+                                    <td class="fw-semibold">
+                                        #{{ $order->id }}
+                                    </td>
+
+                                    <td>
+                                        {{ $order->created_at->format('d M Y') }}
+                                    </td>
+
                                     <td class="fw-bold">
                                         Rp {{ number_format($order->total_price, 0, ',', '.') }}
                                     </td>
+
                                     <td>
                                         <span class="status-badge {{ $badge }}">
                                             {{ ucfirst($order->status) }}
                                         </span>
                                     </td>
                                 </tr>
+
                             @empty
                                 <tr>
-                                    <td colspan="4" class="empty-state">
-                                        Belum ada transaksi
+                                    <td colspan="4" class="text-center py-4">
+                                        Tidak ada data sesuai filter
                                     </td>
                                 </tr>
                             @endforelse
+
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            {{-- ================= PAGINATION ================= --}}
+            <div class="mt-4 d-flex justify-content-center">
+                {{ $orders->links() }}
             </div>
 
         </div>

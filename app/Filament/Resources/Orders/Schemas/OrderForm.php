@@ -17,6 +17,7 @@ class OrderForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1) // 🔥 bikin semua section full width
             ->components([
 
                 Section::make('Informasi Order')
@@ -55,7 +56,8 @@ class OrderForm
 
                             ]),
 
-                    ]),
+                    ])
+                    ->columnSpanFull(), // 🔥 optional biar makin tegas full
 
                 Section::make('Items Pesanan')
                     ->schema([
@@ -87,14 +89,16 @@ class OrderForm
                             ->columns(4)
                             ->createItemButtonLabel('Tambah Item'),
 
-                    ]),
+                    ])
+                    ->columnSpanFull(),
 
                 Section::make('Total')
                     ->schema([
                         TextInput::make('total_price')
                             ->numeric()
                             ->disabled(),
-                    ]),
+                    ])
+                    ->columnSpanFull(),
 
             ]);
     }
