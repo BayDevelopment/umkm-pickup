@@ -213,25 +213,12 @@ class BranchForm
                     FileUpload::make('image')
                         ->label('Foto Cabang')
                         ->image()
-
-                        // hanya jpg
-                        ->acceptedFileTypes([
-                            'image/jpeg',
-                            'image/jpg',
-                        ])
-
-                        // max 1MB (1024 KB)
+                        ->acceptedFileTypes(['image/jpeg', 'image/jpg'])
                         ->maxSize(1024)
-
                         ->directory('branches')
-
-                        ->imageEditor()
-
-                        ->imageResizeTargetWidth(1200)
-                        ->imageResizeTargetHeight(800)
-
+                        ->imageResizeTargetWidth(800)
+                        ->imageResizeTargetHeight(600)
                         ->nullable()
-
                         ->helperText('Format: JPG saja, maksimal 1MB'),
 
                 ]),

@@ -25,7 +25,13 @@ class ProductsTable
             ->columns([
                 ImageColumn::make('image')
                     ->label('Image')
-                    ->disk('public') // sesuaikan dengan disk kamu
+                    ->getStateUsing(
+                        fn($record) => filled($record?->image)
+                            ? asset('storage/' . (is_array($record->image)
+                                ? $record->image[0]
+                                : $record->image))
+                            : asset('images/no-image.png')
+                    )
                     ->height(50)
                     ->width(50)
                     ->circular(),

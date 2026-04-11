@@ -8,6 +8,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
+use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -22,9 +23,13 @@ class BranchesTable
             ->columns([
                 ImageColumn::make('image')
                     ->label('Foto')
+                    ->getStateUsing(
+                        fn($record) => filled($record?->image)
+                            ? asset('storage/' . $record->image)
+                            : asset('images/no-image.png')
+                    )
                     ->square()
-                    ->size(50)
-                    ->defaultImageUrl(url('/images/placeholder-branch.jpg')),
+                    ->size(50),
 
                 TextColumn::make('name')
                     ->label('Nama Cabang')
