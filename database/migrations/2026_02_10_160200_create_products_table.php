@@ -14,15 +14,26 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id();
 
+            // RELASI
             $table->foreignId('category_id')
                 ->nullable()
                 ->constrained()
                 ->nullOnDelete();
 
+            // DATA UTAMA
             $table->string('name');
+            $table->string('slug')->unique();
+            $table->enum('type', ['food', 'drink', 'fashion']); // 🔥 penting
+
             $table->text('description')->nullable();
-            $table->json('image')->nullable();
+
+            // STATUS
             $table->boolean('is_active')->default(true);
+
+            // INDEX (biar cepat query)
+            $table->index('category_id');
+            $table->index('type');
+            $table->index('is_active');
 
             $table->softDeletes();
             $table->timestamps();

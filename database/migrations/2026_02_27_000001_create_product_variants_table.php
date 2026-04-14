@@ -12,32 +12,33 @@ return new class extends Migration
 
             $table->id();
 
+            // RELASI
             $table->foreignId('product_id')
                 ->constrained('products')
                 ->cascadeOnDelete();
 
-            // FIX: branch_id harus constrained
             $table->foreignId('branch_id')
+                ->nullable()
                 ->constrained('branches')
-                ->cascadeOnDelete();
+                ->nullOnDelete();
 
+            // IDENTITAS
             $table->string('sku')->nullable()->unique();
+            $table->string('name')->nullable(); // contoh: "L - Hitam" / "Ayam + Es Teh"
 
-            $table->string('color', 50)->nullable();
-            $table->string('size', 50)->nullable();
+            // 🔥 FLEXIBLE ATTRIBUTES (pengganti color & size)
+            $table->json('attributes')->nullable();
 
+            // HARGA & STOK
             $table->unsignedInteger('price');
-
             $table->unsignedInteger('stock')->default(0);
+
+            // INDEX (biar cepat)
+            $table->index('product_id');
+            $table->index('branch_id');
 
             $table->softDeletes();
             $table->timestamps();
-
-            // unique variant per branch
-            $table->unique(
-                ['product_id', 'branch_id', 'color', 'size'],
-                'product_variant_unique'
-            );
         });
     }
 

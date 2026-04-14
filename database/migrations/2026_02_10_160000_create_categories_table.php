@@ -13,12 +13,27 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
+
+            // HIERARCHY (biar bisa parent-child kategori)
+            $table->foreignId('parent_id')
+                ->nullable()
+                ->constrained('categories')
+                ->nullOnDelete();
+
+            // DATA
             $table->string('name');
             $table->string('slug')->unique();
 
+            // OPTIONAL: icon / gambar kategori
+            $table->string('image')->nullable();
+
+            // STATUS
             $table->boolean('is_active')
                 ->default(true)
                 ->index();
+
+            // INDEX
+            $table->index('parent_id');
 
             $table->softDeletes();
             $table->timestamps();
