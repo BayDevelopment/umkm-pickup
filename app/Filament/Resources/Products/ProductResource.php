@@ -20,6 +20,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
 
 class ProductResource extends Resource
 {
@@ -30,6 +31,55 @@ class ProductResource extends Resource
     protected static ?string $recordTitleAttribute = 'name';
 
     // ADD
+    /*FILTER ADMIN DAN OWNER*/
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = Auth::user();
+
+        if ($user->role === 'owner') {
+            $query->where('umkm_id', $user->umkm_id);
+        }
+
+        return $query;
+    }
+
+    // FILTER EDIT, VIEW & DELETE
+    public static function canEdit($record): bool
+    {
+        $user = Auth::user();
+
+        if ($user->role === 'owner') {
+            return $record->umkm_id === $user->umkm_id;
+        }
+
+        return true;
+    }
+
+    public static function canDelete($record): bool
+    {
+        $user = Auth::user();
+
+        if ($user->role === 'owner') {
+            return $record->umkm_id === $user->umkm_id;
+        }
+
+        return true;
+    }
+
+    public static function canView($record): bool
+    {
+        $user = Auth::user();
+
+        if ($user->role === 'owner') {
+            return $record->umkm_id === $user->umkm_id;
+        }
+
+        return true;
+    }
+
+    /*FILTER ADMIN DAN OWNER*/
+
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');
@@ -47,7 +97,7 @@ class ProductResource extends Resource
         return 'Data Product';
     }
     protected static ?string $navigationLabel = 'Product';
-    protected static ?int    $navigationSort  = 2;
+    protected static ?int    $navigationSort  = 4;
 
     // LAST ADD
 

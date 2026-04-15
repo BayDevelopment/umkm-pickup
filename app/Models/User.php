@@ -45,8 +45,10 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
         $this->notify(new ResetPassword($token));
     }
 
+
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->role === 'admin';
+        return in_array($this->role, ['admin', 'owner'])
+            && $this->status === 'active';
     }
 }

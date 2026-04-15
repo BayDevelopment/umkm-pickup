@@ -6,30 +6,37 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('carts', function (Blueprint $table) {
             $table->id();
 
-            // untuk user login
+            // USER LOGIN
             $table->foreignId('user_id')
                 ->nullable()
                 ->constrained()
-                ->onDelete('cascade');
+                ->cascadeOnDelete();
 
-            // untuk guest
-            $table->string('session_id')->nullable()->index();
+            // GUEST (SESSION)
+            $table->string('session_id')
+                ->nullable();
+
+            // STATUS CART (BIAR BISA TRACK)
+            $table->enum('status', ['active', 'checked_out'])
+                ->default('active');
 
             $table->timestamps();
+
+            // INDEXING
+            $table->index('session_id');
+            $table->index(['user_id', 'status']);
+
+            // UNIQUE (ANTI DUPLIKAT CART AKTIF)
+            $table->unique(['user_id', 'status']);
+            $table->unique(['session_id', 'status']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('carts');

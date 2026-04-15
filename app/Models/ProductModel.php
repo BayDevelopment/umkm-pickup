@@ -57,6 +57,11 @@ class ProductModel extends Model
         );
     }
 
+    public function umkm()
+    {
+        return $this->belongsTo(umkmModel::class);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | ACCESSORS

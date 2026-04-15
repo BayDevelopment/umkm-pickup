@@ -14,6 +14,11 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id();
 
+            // RELASI UMKM (WAJIB 🔥)
+            $table->foreignId('umkm_id')
+                ->constrained()
+                ->cascadeOnDelete();
+
             // RELASI
             $table->foreignId('category_id')
                 ->nullable()

@@ -6,27 +6,31 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
 
+            // RELASI ORDER
             $table->foreignId('order_id')
                 ->constrained()
                 ->cascadeOnDelete();
 
+            // RELASI VARIANT (FIX)
             $table->foreignId('product_variant_id')
-                ->constrained()
+                ->constrained('product_variants')
                 ->cascadeOnDelete();
 
-            $table->integer('quantity');
-            $table->bigInteger('price');
-            $table->bigInteger('subtotal');
+            // QTY (AMAN)
+            $table->unsignedInteger('quantity');
 
-            // Snapshot data (penting!)
+            // HARGA SNAPSHOT
+            $table->unsignedBigInteger('price');
+
+            // SUBTOTAL SNAPSHOT
+            $table->unsignedBigInteger('subtotal');
+
+            // SNAPSHOT PRODUK
             $table->string('product_name');
             $table->string('variant_sku')->nullable();
             $table->string('variant_color')->nullable();
@@ -36,7 +40,11 @@ return new class extends Migration
 
             $table->timestamps();
 
+            // INDEX
             $table->index(['order_id', 'product_variant_id']);
+
+            // OPTIONAL: anti duplicate dalam 1 order
+            $table->unique(['order_id', 'product_variant_id']);
         });
     }
 

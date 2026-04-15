@@ -15,7 +15,10 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class ProductsTable
 {
@@ -23,6 +26,8 @@ class ProductsTable
     {
         return $table
             ->columns([
+
+                // 🔹 IMAGE
                 ImageColumn::make('image')
                     ->label('Image')
                     ->getStateUsing(
@@ -32,36 +37,93 @@ class ProductsTable
                                 : $record->image))
                             : asset('images/no-image.png')
                     )
-                    ->height(50)
                     ->width(50)
                     ->circular(),
 
+                // 🔹 NAME
                 TextColumn::make('name')
-                    ->searchable()
+                    ->searchable(['name', 'slug'])
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->limit(30),
 
-                TextColumn::make('description')
-                    ->limit(50)
-                    ->tooltip(fn($record) => $record->description)
-                    ->wrap(),
+                // 🔹 TYPE (BADGE 🔥)
+                TextColumn::make('type')
+                    ->badge()
+                    ->color(fn($state) => match ($state) {
+                        'food' => 'success',
+                        'drink' => 'info',
+                        'fashion' => 'warning',
+                        default => 'gray',
+                    }),
+
+                // 🔹 CATEGORY
+                TextColumn::make('category.name')
+                    ->label('Kategori')
+                    ->sortable()
+                    ->toggleable(),
+
+                // 🔹 VARIANT COUNT (kalau pakai variant)
+                TextColumn::make('variants_count')
+                    ->counts('variants')
+                    ->label('Varian')
+                    ->sortable(),
+
+                // 🔹 STATUS
                 IconColumn::make('is_active')
                     ->boolean()
-                    ->label('Active'),
+                    ->label('Status')
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle'),
+
+                // 🔹 CREATED AT
+                TextColumn::make('created_at')
+                    ->label('Dibuat')
+                    ->dateTime('d M Y')
+                    ->sortable()
+                    ->toggleable(),
+
+                // 🔹 UMKM (HANYA ADMIN 🔐)
+                TextColumn::make('umkm.name')
+                    ->label('UMKM')
+                    ->visible(fn() => Auth::user()->role === 'admin'),
             ])
+
             ->filters([
+
+                // 🔹 FILTER TYPE
+                SelectFilter::make('type')
+                    ->options([
+                        'food' => 'Makanan',
+                        'drink' => 'Minuman',
+                        'fashion' => 'Fashion',
+                    ]),
+
+                // 🔹 FILTER CATEGORY
+                SelectFilter::make('category_id')
+                    ->relationship('category', 'name')
+                    ->label('Kategori'),
+
+                // 🔹 FILTER STATUS
+                TernaryFilter::make('is_active')
+                    ->label('Status'),
+
+                // 🔹 TRASH
                 TrashedFilter::make(),
             ])
+
             ->recordActions([
                 ActionGroup::make([
                     ViewAction::make()
                         ->label('Lihat')
                         ->icon('heroicon-o-eye')
                         ->color('gray'),
+
                     EditAction::make()
                         ->label('Edit')
                         ->icon('heroicon-o-pencil-square')
                         ->color('primary'),
+
                     DeleteAction::make()
                         ->label('Hapus')
                         ->icon('heroicon-o-trash')
@@ -74,15 +136,16 @@ class ProductsTable
                                 ->title('Terhapus')
                                 ->body('Data berhasil dihapus.')
                                 ->success()
-                        )
+                        ),
                 ])
                     ->label('Aksi')
                     ->icon('heroicon-o-ellipsis-vertical')
                     ->button()
                     ->outlined()
                     ->tooltip('Aksi data')
-                    ->dropdownPlacement('bottom-end')
+                    ->dropdownPlacement('bottom-end'),
             ])
+
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

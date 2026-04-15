@@ -5,10 +5,25 @@ namespace App\Filament\Resources\Products\Pages;
 use App\Filament\Resources\Products\ProductResource;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class CreateProduct extends CreateRecord
 {
     protected static string $resource = ProductResource::class;
+
+    // FILTER ADMIN AND OWNER
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = Auth::user();
+
+        if ($user->role === 'owner') {
+            $query->where('umkm_id', $user->umkm_id);
+        }
+
+        return $query;
+    }
 
     protected function getRedirectUrl(): string
     {

@@ -43,7 +43,7 @@ class OrderResource extends Resource
         return 'Data Pesanan';
     }
     protected static ?string $navigationLabel = 'Pesanan';
-    protected static ?int    $navigationSort  = 4;
+    protected static ?int    $navigationSort  = 6;
 
     public static function form(Schema $schema): Schema
     {

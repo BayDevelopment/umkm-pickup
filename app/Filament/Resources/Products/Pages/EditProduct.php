@@ -10,10 +10,21 @@ use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\Facades\Auth;
 
 class EditProduct extends EditRecord
 {
     protected static string $resource = ProductResource::class;
+
+    // FILTER OWNER AND ADMIN
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (Auth::user()->role === 'owner') {
+            $data['umkm_id'] = Auth::user()->umkm_id;
+        }
+
+        return $data;
+    }
 
     protected function getRedirectUrl(): string
     {

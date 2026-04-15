@@ -39,7 +39,7 @@ class UserResource extends Resource
         return 'Data Users';
     }
     protected static ?string $navigationLabel = 'Users';
-    protected static ?int    $navigationSort  = 5;
+    protected static ?int    $navigationSort  = 7;
 
     public static function form(Schema $schema): Schema
     {

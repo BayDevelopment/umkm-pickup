@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Products\Schemas;
 
 use App\Models\CategoryModel;
+use App\Models\umkmModel;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -11,6 +12,7 @@ use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 // intervention image
 use Intervention\Image\ImageManager;
@@ -38,23 +40,37 @@ class ProductForm
                             )
                             ->searchable()
                             ->preload()
-                            ->required()
-                            ->disabled(fn() => CategoryModel::where('is_active', true)->count() === 0)
+                            ->required(fn() => CategoryModel::where('is_active', true)->exists())
+                            ->disabled(fn() => !CategoryModel::where('is_active', true)->exists())
                             ->helperText(function () {
-                                return ! CategoryModel::where('is_active', true)->exists()
-                                    ? 'Data kategori kosong. Silahkan buat kategori terlebih dahulu.'
+                                return !CategoryModel::where('is_active', true)->exists()
+                                    ? 'Kategori tidak ditemukan!'
                                     : null;
                             }),
+
+                        // 🔥 TYPE (WAJIB)
+                        Select::make('type')
+                            ->label('Jenis Produk')
+                            ->options([
+                                'food' => 'Makanan',
+                                'drink' => 'Minuman',
+                                'fashion' => 'Fashion',
+                            ])
+                            ->required(),
 
                         TextInput::make('name')
                             ->required()
                             ->minLength(3)
                             ->maxLength(255)
-                            ->live() // ⚠ jangan pakai onBlur dulu
+                            ->live()
                             ->afterStateUpdated(function (Set $set, ?string $state) {
                                 if ($state) {
                                     $slug = Str::slug($state);
-                                    $slug = preg_replace('/[0-9]/', '', $slug);
+
+                                    // 🔥 OPTIONAL: prefix umkm biar unik
+                                    if (Auth::user()->role === 'owner') {
+                                        $slug = Auth::user()->umkm_id . '-' . $slug;
+                                    }
 
                                     $set('slug', $slug);
                                 }
@@ -66,13 +82,10 @@ class ProductForm
                             ->required()
                             ->unique(ignoreRecord: true),
 
-
                         Textarea::make('description')
                             ->label('Deskripsi')
                             ->rows(4)
-                            ->placeholder('Masukkan deskripsi produk (opsional)')
                             ->columnSpanFull(),
-
                     ])
                     ->columns(1),
 
@@ -89,15 +102,14 @@ class ProductForm
                             ->directory('products')
                             ->reorderable()
                             ->maxFiles(3)
-                            ->acceptedFileTypes(['image/jpeg'])
-                            ->maxSize(1024)
+                            ->acceptedFileTypes(['image/jpeg', 'image/png'])
+                            ->maxSize(2048)
                             ->saveUploadedFileUsing(function ($file) {
 
                                 $manager = new ImageManager(new Driver());
 
                                 $image = $manager->read($file->getRealPath());
 
-                                // resize height = 480, width auto
                                 $image->scale(height: 480);
 
                                 $filename = Str::uuid() . '.jpg';
@@ -109,13 +121,40 @@ class ProductForm
 
                                 return 'products/' . $filename;
                             })
-                            ->helperText('Tinggi gambar otomatis diubah menjadi 480px')
-                            ->columnSpanFull(),
+                            ->helperText('Gambar akan otomatis resize tinggi 480px'),
+
                         Toggle::make('is_active')
                             ->label('Aktifkan Produk')
-                            ->default(true)
-                            ->inline(false),
-                    ]),
+                            ->default(true),
+
+                        Select::make('umkm_id')
+                            ->label('UMKM')
+                            ->relationship(
+                                name: 'umkm',
+                                titleAttribute: 'name',
+                                modifyQueryUsing: fn($query) =>
+                                $query->where('verification_status', 'approved')
+                            )
+                            ->visible(fn() => Auth::user()->role === 'admin')
+
+                            ->required(
+                                fn() =>
+                                Auth::user()->role === 'admin' &&
+                                    umkmModel::where('verification_status', 'approved')->exists()
+                            )
+
+                            ->disabled(
+                                fn() =>
+                                !umkmModel::where('verification_status', 'approved')->exists()
+                            )
+
+                            ->helperText(
+                                fn() =>
+                                !umkmModel::where('verification_status', 'approved')->exists()
+                                    ? 'UMKM tidak ditemukan! Silakan approve UMKM terlebih dahulu.'
+                                    : null
+                            )
+                    ])
             ]);
     }
 }

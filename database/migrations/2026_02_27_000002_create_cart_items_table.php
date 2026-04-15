@@ -6,31 +6,34 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('cart_items', function (Blueprint $table) {
             $table->id();
 
+            // RELASI KE CART
             $table->foreignId('cart_id')
                 ->constrained()
-                ->onDelete('cascade');
+                ->cascadeOnDelete();
 
+            // RELASI KE VARIANT
             $table->foreignId('variant_id')
                 ->constrained('product_variants')
-                ->onDelete('cascade');
+                ->cascadeOnDelete();
 
-            $table->integer('qty');
+            // QTY (TIDAK BOLEH NEGATIF)
+            $table->unsignedInteger('qty');
+
+            // SNAPSHOT HARGA (WAJIB)
+            $table->unsignedBigInteger('price');
 
             $table->timestamps();
+
+            // ANTI DUPLIKAT ITEM
+            $table->unique(['cart_id', 'variant_id']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('cart_items');

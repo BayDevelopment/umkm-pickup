@@ -42,7 +42,7 @@ class PaymentMethodResource extends Resource
         return 'Data Payment';
     }
     protected static ?string $navigationLabel = 'Payment';
-    protected static ?int    $navigationSort  = 3;
+    protected static ?int    $navigationSort  = 5;
 
     public static function form(Schema $schema): Schema
     {

@@ -6,27 +6,26 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('payment_methods', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Transfer Bank
-            $table->string('bank_name')->nullable(); // BCA, BRI
+
+            $table->string('name'); // contoh: Transfer Bank, E-Wallet
+            $table->string('bank_name')->nullable(); // BCA, BRI, dll
             $table->string('account_number')->nullable();
             $table->string('account_name')->nullable();
+
             $table->boolean('is_active')->default(true);
 
             $table->softDeletes();
             $table->timestamps();
+
+            // Optional index (biar cepat filter aktif)
+            $table->index('is_active');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('payment_methods');
