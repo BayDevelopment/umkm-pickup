@@ -27,28 +27,27 @@ class ProductForm
             ->components([
 
                 Section::make('Informasi Produk')
-                    ->description('Detail utama produk')
-                    ->icon('heroicon-o-cube')
                     ->schema([
 
                         Select::make('category_id')
                             ->label('Kategori')
-                            ->relationship(
-                                name: 'category',
-                                titleAttribute: 'name',
-                                modifyQueryUsing: fn($query) => $query->where('is_active', true)
-                            )
+                            ->options(function () {
+                                $data = CategoryModel::where('is_active', true)->pluck('name', 'id');
+
+                                return $data->isEmpty()
+                                    ? ['' => 'Kategori tidak ditemukan']
+                                    : $data;
+                            })
                             ->searchable()
                             ->preload()
-                            ->required(fn() => CategoryModel::where('is_active', true)->exists())
-                            ->disabled(fn() => !CategoryModel::where('is_active', true)->exists())
-                            ->helperText(function () {
-                                return !CategoryModel::where('is_active', true)->exists()
-                                    ? 'Kategori tidak ditemukan!'
-                                    : null;
-                            }),
+                            ->disabled(fn() => CategoryModel::where('is_active', true)->count() === 0)
+                            ->helperText(
+                                fn() =>
+                                CategoryModel::where('is_active', true)->count() === 0
+                                    ? 'Kategori tidak ditemukan'
+                                    : null
+                            ),
 
-                        // 🔥 TYPE (WAJIB)
                         Select::make('type')
                             ->label('Jenis Produk')
                             ->options([
@@ -60,19 +59,10 @@ class ProductForm
 
                         TextInput::make('name')
                             ->required()
-                            ->minLength(3)
-                            ->maxLength(255)
                             ->live()
-                            ->afterStateUpdated(function (Set $set, ?string $state) {
+                            ->afterStateUpdated(function (Set $set, $state) {
                                 if ($state) {
-                                    $slug = Str::slug($state);
-
-                                    // 🔥 OPTIONAL: prefix umkm biar unik
-                                    if (Auth::user()->role === 'owner') {
-                                        $slug = Auth::user()->umkm_id . '-' . $slug;
-                                    }
-
-                                    $set('slug', $slug);
+                                    $set('slug', Str::slug($state));
                                 }
                             }),
 
@@ -83,77 +73,52 @@ class ProductForm
                             ->unique(ignoreRecord: true),
 
                         Textarea::make('description')
-                            ->label('Deskripsi')
-                            ->rows(4)
-                            ->columnSpanFull(),
+                            ->rows(4),
+
+                        // 🔥 AUTO UMKM UNTUK OWNER
+                        Select::make('umkm_id')
+                            ->label('UMKM')
+                            ->options(function () {
+                                $data = umkmModel::where('verification_status', 'approved')
+                                    ->pluck('name', 'id');
+
+                                return $data->isEmpty()
+                                    ? ['' => 'UMKM tidak ditemukan']
+                                    : $data;
+                            })
+                            ->searchable()
+                            ->visible(fn() => Auth::user()->role === 'admin')
+                            ->required(fn() => Auth::user()->role === 'admin')
+                            ->disabled(
+                                fn() =>
+                                umkmModel::where('verification_status', 'approved')->count() === 0
+                            )
+                            ->helperText(
+                                fn() =>
+                                umkmModel::where('verification_status', 'approved')->count() === 0
+                                    ? 'UMKM tidak ditemukan'
+                                    : null
+                            ),
+
                     ])
                     ->columns(1),
 
                 Section::make('Media & Status')
-                    ->description('Gambar dan status publikasi')
-                    ->icon('heroicon-o-photo')
                     ->schema([
 
-                        FileUpload::make('image')
-                            ->label('Gambar Produk')
-                            ->image()
-                            ->multiple()
-                            ->disk('public')
-                            ->directory('products')
-                            ->reorderable()
-                            ->maxFiles(3)
-                            ->acceptedFileTypes(['image/jpeg', 'image/png'])
-                            ->maxSize(2048)
-                            ->saveUploadedFileUsing(function ($file) {
-
-                                $manager = new ImageManager(new Driver());
-
-                                $image = $manager->read($file->getRealPath());
-
-                                $image->scale(height: 480);
-
-                                $filename = Str::uuid() . '.jpg';
-
-                                Storage::disk('public')->put(
-                                    'products/' . $filename,
-                                    $image->toJpeg(85)
-                                );
-
-                                return 'products/' . $filename;
-                            })
-                            ->helperText('Gambar akan otomatis resize tinggi 480px'),
-
                         Toggle::make('is_active')
-                            ->label('Aktifkan Produk')
                             ->default(true),
 
-                        Select::make('umkm_id')
-                            ->label('UMKM')
-                            ->relationship(
-                                name: 'umkm',
-                                titleAttribute: 'name',
-                                modifyQueryUsing: fn($query) =>
-                                $query->where('verification_status', 'approved')
-                            )
-                            ->visible(fn() => Auth::user()->role === 'admin')
+                        // ❗ HANYA UPLOAD, PENYIMPANAN DI HANDLE DI RESOURCE
+                        FileUpload::make('images_temp')
+                            ->label('Upload Gambar')
+                            ->multiple()
+                            ->image()
+                            ->disk('public')
+                            ->directory('temp')
+                            ->maxFiles(3)
+                            ->dehydrated(false),
 
-                            ->required(
-                                fn() =>
-                                Auth::user()->role === 'admin' &&
-                                    umkmModel::where('verification_status', 'approved')->exists()
-                            )
-
-                            ->disabled(
-                                fn() =>
-                                !umkmModel::where('verification_status', 'approved')->exists()
-                            )
-
-                            ->helperText(
-                                fn() =>
-                                !umkmModel::where('verification_status', 'approved')->exists()
-                                    ? 'UMKM tidak ditemukan! Silakan approve UMKM terlebih dahulu.'
-                                    : null
-                            )
                     ])
             ]);
     }

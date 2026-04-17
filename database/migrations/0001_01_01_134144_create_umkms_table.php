@@ -10,6 +10,10 @@ return new class extends Migration
     {
         Schema::create('umkms', function (Blueprint $table) {
             $table->id();
+            // 🔥 RELASI KE USER (OWNER)
+            $table->foreignId('user_id')
+                ->constrained()
+                ->cascadeOnDelete();
 
             // DATA UMKM
             $table->string('name');

@@ -45,10 +45,17 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
         $this->notify(new ResetPassword($token));
     }
 
+    // Relstionship
+    public function umkm()
+    {
+        return $this->hasOne(umkmModel::class, 'owner_id');
+    }
+
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return in_array($this->role, ['admin', 'owner'])
-            && $this->status === 'active';
+        return in_array($this->role, ['admin', 'owner']);
+        // Hapus && $this->status === 'active'
+        // Biarkan middleware yang handle redirect pending
     }
 }

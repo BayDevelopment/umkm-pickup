@@ -46,6 +46,11 @@ class umkmModel extends Model
         return $this->hasMany(OrderItemModel::class);
     }
 
+    public function owner()
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | ACCESSORS (OPTIONAL BAGUS)

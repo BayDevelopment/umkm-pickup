@@ -26,6 +26,24 @@ class EditProduct extends EditRecord
         return $data;
     }
 
+    // ADD menambahkan gambar di form product dan di simpan di table gambar produk
+    protected function afterSave(): void
+    {
+        if (!isset($this->data['images_temp'])) return;
+
+        // hapus lama (opsional)
+        $this->record->images()->delete();
+
+        foreach ($this->data['images_temp'] as $index => $path) {
+            $this->record->images()->create([
+                'path' => $path,
+                'is_main' => $index === 0,
+                'sort_order' => $index,
+            ]);
+        }
+    }
+    // ADD menambahkan gambar di form product dan di simpan di table gambar produk
+
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');

@@ -8,6 +8,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Notifications\Notification;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -19,6 +20,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
@@ -31,7 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->brandName(new HtmlString(
-                '<span style="font-style: italic; font-weight: 400;">Trendora</span><span style="font-weight: 700;font-style: italic;">Panel</span>'
+                '<span style="font-style: italic; font-weight: 400;">UMKM</span><span style="font-weight: 700;font-style: italic;">Panel</span>'
             ))
             ->renderHook(
                 PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
@@ -41,8 +43,18 @@ class AdminPanelProvider extends PanelProvider
                 </div>
             ')
             )
+            ->renderHook(
+                PanelsRenderHook::AUTH_REGISTER_FORM_AFTER,
+                fn() => new HtmlString('
+                <div style="text-align:center; margin-top:20px; font-size:12px; color:#6b7280;">
+                    Developed by <strong>Bayu Albar Ladici</strong>
+                </div>
+            ')
+            )
             ->font('poppins')
             ->login()
+            ->registration(\App\Filament\Auth\Register::class)
+            ->emailVerification()
             ->passwordReset()
             ->authGuard('web') // WAJIB
             ->authPasswordBroker('users') // WAJIB INI
@@ -68,7 +80,12 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                \App\Http\Middleware\CheckUserApproval::class,
             ])
+            ->renderHook(
+                PanelsRenderHook::BODY_START,
+                fn() => view('filament.hooks.flash-notification')
+            )
             ->authMiddleware([
                 Authenticate::class,
             ]);

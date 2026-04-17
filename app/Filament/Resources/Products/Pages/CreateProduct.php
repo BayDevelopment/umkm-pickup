@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Products\Pages;
 
 use App\Filament\Resources\Products\ProductResource;
+use App\Models\ProductImageModel;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Builder;
@@ -24,6 +25,22 @@ class CreateProduct extends CreateRecord
 
         return $query;
     }
+
+    // ADD menambahkan gambar di form product dan di simpan di table gambar produk
+    protected function afterCreate(): void
+    {
+        $images = $this->data['images_temp'] ?? [];
+
+        foreach ($images as $index => $path) {
+            ProductImageModel::create([
+                'product_id' => $this->record->id,
+                'path' => $path,
+                'is_main' => $index === 0,
+                'sort_order' => $index,
+            ]);
+        }
+    }
+    // ADD menambahkan gambar di form product dan di simpan di table gambar produk
 
     protected function getRedirectUrl(): string
     {

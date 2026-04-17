@@ -28,12 +28,6 @@ return new class extends Migration
             // NOMOR HP
             $table->string('phone')->nullable();
 
-            // RELASI KE UMKM
-            $table->foreignId('umkm_id')
-                ->nullable()
-                ->constrained()
-                ->nullOnDelete();
-
             $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();

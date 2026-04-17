@@ -14,8 +14,9 @@ class ProductModel extends Model
     protected $table = 'products';
 
     protected $fillable = [
+        'umkm_id', // 🔥 WAJIB TAMBAH
         'category_id',
-        'type', // food, drink, fashion
+        'type',
         'name',
         'slug',
         'description',

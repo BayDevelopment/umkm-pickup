@@ -28,7 +28,6 @@ return new class extends Migration
             // DATA UTAMA
             $table->string('name');
             $table->string('slug')->unique();
-            $table->enum('type', ['food', 'drink', 'fashion']); // 🔥 penting
 
             $table->text('description')->nullable();
 
@@ -37,7 +36,6 @@ return new class extends Migration
 
             // INDEX (biar cepat query)
             $table->index('category_id');
-            $table->index('type');
             $table->index('is_active');
 
             $table->softDeletes();

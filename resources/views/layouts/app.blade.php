@@ -70,5 +70,17 @@
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous">
     </script>
 </body>
+@if (auth()->check() && auth()->user()->status === 'pending')
+    <div class="fixed inset-0 z-50 backdrop-blur-sm bg-black/30 flex items-center justify-center">
+        <div class="bg-white rounded-xl p-6 shadow-lg text-center max-w-md">
+            <h2 class="text-lg font-bold text-gray-800">
+                Akun Anda masih pending
+            </h2>
+            <p class="text-sm text-gray-500 mt-2">
+                Silakan tunggu admin menyetujui akun Anda.
+            </p>
+        </div>
+    </div>
+@endif
 
 </html>

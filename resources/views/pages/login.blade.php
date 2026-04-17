@@ -73,6 +73,11 @@
                         <a href="{{ route('register') }}" class="ms-1 small text-decoration-none" style="color:#d9c7ff;">
                             Daftar sekarang
                         </a>
+                        <span class="small mx-1" style="color: var(--td-primary);">·</span>
+                        <a href="{{ route('filament.admin.auth.login') }}" class="small text-decoration-none"
+                            style="color:#d9c7ff;">
+                            Login sebagai Owner
+                        </a>
                     </div>
                 </div>
 
