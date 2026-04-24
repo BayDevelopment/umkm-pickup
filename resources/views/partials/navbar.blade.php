@@ -24,6 +24,7 @@
                 if ($cart) {
                     $cartCount = $cart->items()->count();
                 }
+
             @endphp
 
             <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2 td-nav-icons">

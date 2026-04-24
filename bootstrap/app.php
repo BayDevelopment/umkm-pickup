@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.approval' => \App\Http\Middleware\CheckUserApproval::class, // tambah ini
         ]);
     })
+
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (HttpException $e, $request) {
 

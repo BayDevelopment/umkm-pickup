@@ -24,6 +24,10 @@ class RedirectIfAuthenticatedToDashboard
                 return redirect('/admin');
             }
 
+            if ($user->role === 'owner') {
+                return redirect('/admin');
+            }
+
             if ($user->role === 'customer') {
                 return redirect()->route('customer.dashboard');
             }

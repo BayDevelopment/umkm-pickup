@@ -11,8 +11,17 @@ class CreateUMKM extends CreateRecord
 {
     protected static string $resource = UMKMResource::class;
 
+    protected function getRedirectUrl(): string
+    {
+        $user = Auth::user();
 
-    // ambil id user yg login untuk membuat umkm
+        if ($user->role === 'owner' && $user->status === 'pending') {
+            return '/admin/pending-approval';
+        }
+
+        return $this->getResource()::getUrl('index');
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         if (Auth::user()->role !== 'admin') {
@@ -22,10 +31,6 @@ class CreateUMKM extends CreateRecord
         return $data;
     }
 
-    protected function getRedirectUrl(): string
-    {
-        return $this->getResource()::getUrl('index');
-    }
     protected function getCreatedNotification(): ?Notification
     {
         return Notification::make()
@@ -36,24 +41,36 @@ class CreateUMKM extends CreateRecord
 
     protected function getFormActions(): array
     {
-        return [
+        $user = Auth::user();
 
-            $this->getCreateFormAction()
-                ->label('Create')
+        $actions = [
+            \Filament\Actions\Action::make('create')
+                ->label('Kirim Data')
                 ->icon('heroicon-o-check-circle')
-                ->color('primary'),
-
-            $this->getCreateAnotherFormAction()
-                ->label('Create & Create Another')
-                ->icon('heroicon-o-plus-circle')
-                ->color('success'),
+                ->color('primary')
+                ->requiresConfirmation()
+                ->modalHeading('Yakin ingin mengirim data?')
+                ->modalDescription('Periksa kembali data UMKM Anda. Setelah dikirim dan disetujui admin, data tidak dapat diubah.')
+                ->modalSubmitActionLabel('Ya, Kirim Sekarang')
+                ->modalCancelActionLabel('Periksa Lagi')
+                ->action(fn() => $this->create()),
 
             $this->getCancelFormAction()
                 ->label('Cancel')
                 ->url($this->getResource()::getUrl('index'))
                 ->icon('heroicon-o-x-mark')
                 ->color('gray'),
-
         ];
+
+        if ($user->role === 'admin') {
+            array_splice($actions, 1, 0, [
+                $this->getCreateAnotherFormAction()
+                    ->label('Create & Create Another')
+                    ->icon('heroicon-o-plus-circle')
+                    ->color('success'),
+            ]);
+        }
+
+        return $actions;
     }
 }

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\UMKMS\Pages;
 use App\Filament\Resources\UMKMS\UMKMResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Support\Facades\Auth;
 
 class ListUMKMS extends ListRecords
 {
@@ -15,7 +16,17 @@ class ListUMKMS extends ListRecords
         return [
             CreateAction::make()
                 ->label('UMKM')
-                ->icon('heroicon-o-plus'),
+                ->icon('heroicon-o-plus')
+                ->visible(function () {
+                    $user = Auth::user();
+
+                    if ($user->role === 'admin') {
+                        return true;
+                    }
+
+                    // Owner hanya bisa create jika belum punya UMKM
+                    return $user->role === 'owner' && !$user->umkm;
+                }),
         ];
     }
 }

@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use Filament\Widgets\ChartWidget;
 use App\Models\CategoryModel;
+use Illuminate\Support\Facades\Auth;
 
 class ProductPerCategoryChart extends ChartWidget
 {
@@ -15,7 +16,13 @@ class ProductPerCategoryChart extends ChartWidget
 
     protected function getData(): array
     {
-        $data = CategoryModel::withCount('products')->get();
+        $user = Auth::user();
+
+        $data = CategoryModel::withCount(['products' => function ($query) use ($user) {
+            if ($user->role === 'owner') {
+                $query->where('umkm_id', $user->umkm?->id);
+            }
+        }])->get();
 
         return [
             'datasets' => [

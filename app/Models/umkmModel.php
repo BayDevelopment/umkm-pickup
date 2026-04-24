@@ -12,6 +12,7 @@ class umkmModel extends Model
     protected $table = 'umkms';
 
     protected $fillable = [
+        'user_id',
         'name',
         'address',
         'city',
@@ -48,7 +49,7 @@ class umkmModel extends Model
 
     public function owner()
     {
-        return $this->belongsTo(User::class, 'owner_id');
+        return $this->belongsTo(User::class);
     }
 
     /*

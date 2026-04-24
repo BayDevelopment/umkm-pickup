@@ -48,7 +48,7 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
     // Relstionship
     public function umkm()
     {
-        return $this->hasOne(umkmModel::class, 'owner_id');
+        return $this->hasOne(umkmModel::class, 'user_id');
     }
 
 

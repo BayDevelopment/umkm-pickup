@@ -79,6 +79,16 @@ class ProductForm
                         Select::make('umkm_id')
                             ->label('UMKM')
                             ->options(function () {
+                                $user = Auth::user();
+
+                                // Owner hanya lihat UMKM miliknya
+                                if ($user->role === 'owner') {
+                                    return umkmModel::where('verification_status', 'approved')
+                                        ->where('user_id', $user->id)
+                                        ->pluck('name', 'id');
+                                }
+
+                                // Admin lihat semua
                                 $data = umkmModel::where('verification_status', 'approved')
                                     ->pluck('name', 'id');
 
@@ -86,20 +96,17 @@ class ProductForm
                                     ? ['' => 'UMKM tidak ditemukan']
                                     : $data;
                             })
+                            ->default(function () {
+                                $user = Auth::user();
+                                if ($user->role === 'owner') {
+                                    return $user->umkm?->id; // otomatis isi umkm_id milik owner
+                                }
+                                return null;
+                            })
                             ->searchable()
                             ->visible(fn() => Auth::user()->role === 'admin')
                             ->required(fn() => Auth::user()->role === 'admin')
-                            ->disabled(
-                                fn() =>
-                                umkmModel::where('verification_status', 'approved')->count() === 0
-                            )
-                            ->helperText(
-                                fn() =>
-                                umkmModel::where('verification_status', 'approved')->count() === 0
-                                    ? 'UMKM tidak ditemukan'
-                                    : null
-                            ),
-
+                            ->dehydrated(true), // pastikan nilai terkirim meski hidden
                     ])
                     ->columns(1),
 

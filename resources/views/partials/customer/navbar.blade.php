@@ -22,6 +22,7 @@
                 if ($cart) {
                     $cartCount = $cart->items()->count();
                 }
+
             @endphp
 
             <a href="{{ route('customer.cart.index') }}" class="td-cart-mobile d-lg-none position-relative">

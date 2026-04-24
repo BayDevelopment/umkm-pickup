@@ -5,10 +5,12 @@ namespace App\Filament\Resources\Branches\Pages;
 use App\Filament\Resources\Branches\BranchResource;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Support\Facades\Auth;
 
 class CreateBranch extends CreateRecord
 {
     protected static string $resource = BranchResource::class;
+
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');

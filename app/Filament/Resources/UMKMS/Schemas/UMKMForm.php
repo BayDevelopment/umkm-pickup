@@ -25,11 +25,11 @@ class UMKMForm
 
                         TextInput::make('name')
                             ->label('Nama UMKM')
-                            ->placeholder('Contoh : Dapur Nyiroro')
+                            ->placeholder('Contoh : Dapur Nusantara')
                             ->required()
                             ->minLength(3)
                             ->maxLength(255)
-                            ->regex('/^[a-zA-Z0-9\s]+$/') // hanya huruf, angka, spasi
+                            ->regex('/^[a-zA-Z0-9\s]+$/')
                             ->validationMessages([
                                 'regex' => 'Nama hanya boleh huruf dan angka',
                             ]),
@@ -37,6 +37,8 @@ class UMKMForm
                         TextInput::make('city')
                             ->label('Kota')
                             ->placeholder('Contoh : Cilegon')
+                            ->required() // ❌ belum ada required
+                            ->minLength(3) // ❌ belum ada minLength
                             ->maxLength(100)
                             ->regex('/^[a-zA-Z\s]+$/')
                             ->validationMessages([
@@ -49,6 +51,7 @@ class UMKMForm
                             ->rows(3)
                             ->required()
                             ->minLength(10)
+                            ->maxLength(500) // ❌ belum ada maxLength
                             ->columnSpanFull(),
 
                     ]),
@@ -65,33 +68,27 @@ class UMKMForm
                                 $owners = \App\Models\User::where('role', 'owner')
                                     ->pluck('name', 'id');
 
-                                // kalau kosong → tampilkan pesan
                                 return $owners->isEmpty()
                                     ? ['' => 'Pengguna dengan role owner kosong']
                                     : $owners;
                             })
                             ->default(
-                                fn() =>
-                                Auth::user()->role === 'owner'
-                                    ? Auth::id()
-                                    : null
+                                fn() => Auth::user()->role === 'owner' ? Auth::id() : null
                             )
                             ->disabled(function () {
                                 $isOwnerEmpty = \App\Models\User::where('role', 'owner')->count() === 0;
-
                                 return $isOwnerEmpty || Auth::user()->role !== 'admin';
                             })
+                            ->dehydrated(fn() => Auth::user()->role === 'admin') // hanya kirim data jika admin
                             ->required()
                             ->searchable()
                             ->helperText(function () {
                                 if (\App\Models\User::where('role', 'owner')->count() === 0) {
                                     return 'Pengguna dengan role owner kosong';
                                 }
-
                                 if (Auth::user()->role !== 'admin') {
                                     return 'UMKM ini otomatis milik Anda';
                                 }
-
                                 return null;
                             }),
 
@@ -99,12 +96,13 @@ class UMKMForm
                             ->label('NIK')
                             ->placeholder('Contoh : 320xxxxxxxxxxxxx')
                             ->required()
-                            ->length(16) // 🔥 wajib 16 digit
+                            ->length(16)
                             ->regex('/^[0-9]+$/')
                             ->unique(ignoreRecord: true)
                             ->validationMessages([
                                 'length' => 'NIK harus 16 digit',
                                 'regex' => 'NIK hanya boleh angka',
+                                'unique' => 'NIK sudah terdaftar', // ❌ belum ada pesan unique
                             ]),
 
                         FileUpload::make('ktp_image')
@@ -113,9 +111,10 @@ class UMKMForm
                             ->disk('public')
                             ->directory('ktp')
                             ->acceptedFileTypes(['image/jpeg', 'image/png'])
-                            ->maxSize(2048) // 2MB
+                            ->maxSize(2048)
                             ->required()
-                            ->imageEditor() // opsional (biar bisa crop)
+                            ->imageEditor()
+                            ->helperText('Format: JPG/PNG, maksimal 2MB') // ❌ belum ada helper text
                             ->validationMessages([
                                 'required' => 'Foto KTP wajib diupload',
                             ]),

@@ -14,6 +14,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class UMKMSTable
 {
@@ -92,17 +93,28 @@ class UMKMSTable
                     ViewAction::make()
                         ->label('Lihat')
                         ->icon('heroicon-o-eye')
-                        ->color('gray'),
+                        ->color('gray')
+                        ->visible(
+                            fn($record) =>
+                            Auth::user()->role === 'admin' ||
+                                ($record->user_id === Auth::id() && $record->verification_status === 'approved')
+                        ),
 
                     EditAction::make()
                         ->label('Edit')
                         ->icon('heroicon-o-pencil-square')
-                        ->color('primary'),
+                        ->color('primary')
+                        ->visible(
+                            fn($record) =>
+                            Auth::user()->role === 'admin' ||
+                                ($record->user_id === Auth::id() && $record->verification_status === 'pending')
+                        ),
 
                     DeleteAction::make()
                         ->label('Hapus')
                         ->icon('heroicon-o-trash')
                         ->color('danger')
+                        ->visible(fn() => Auth::user()->role === 'admin')
                         ->requiresConfirmation()
                         ->modalHeading('Hapus data?')
                         ->modalDescription('Data yang dihapus tidak bisa dikembalikan.')

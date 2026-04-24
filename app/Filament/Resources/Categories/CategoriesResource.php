@@ -16,6 +16,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
 
 class CategoriesResource extends Resource
 {
@@ -43,6 +44,28 @@ class CategoriesResource extends Resource
     }
     protected static ?string $navigationLabel = 'Category';
     protected static ?int    $navigationSort  = 2;
+
+    public static function canAccess(): bool
+    {
+        return Auth::user()->role === 'admin';
+    }
+    public static function canEdit($record): bool
+    {
+        return Auth::user()->role === 'admin';
+    }
+    public static function canCreate(): bool
+    {
+        return Auth::user()->role === 'admin';
+    }
+    public static function canDelete($record): bool
+    {
+        return Auth::user()->role === 'admin';
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return Auth::user()->role === 'admin';
+    }
 
     public static function form(Schema $schema): Schema
     {

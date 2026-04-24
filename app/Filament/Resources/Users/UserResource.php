@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class UserResource extends Resource
 {
@@ -40,6 +41,28 @@ class UserResource extends Resource
     }
     protected static ?string $navigationLabel = 'Users';
     protected static ?int    $navigationSort  = 7;
+
+    public static function canAccess(): bool
+    {
+        return Auth::user()->role === 'admin';
+    }
+    public static function canEdit($record): bool
+    {
+        return Auth::user()->role === 'admin';
+    }
+    public static function canCreate(): bool
+    {
+        return Auth::user()->role === 'admin';
+    }
+    public static function canDelete($record): bool
+    {
+        return Auth::user()->role === 'admin';
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return Auth::user()->role === 'admin';
+    }
 
     public static function form(Schema $schema): Schema
     {
