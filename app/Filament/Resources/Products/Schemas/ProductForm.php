@@ -14,10 +14,6 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-// intervention image
-use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
-use Illuminate\Support\Facades\Storage;
 
 class ProductForm
 {
@@ -31,34 +27,39 @@ class ProductForm
 
                         Select::make('category_id')
                             ->label('Kategori')
+                            ->nullable()
                             ->options(function () {
-                                $data = CategoryModel::where('is_active', true)->pluck('name', 'id');
+                                $categories = CategoryModel::where('is_active', true)
+                                    ->whereNull('parent_id')
+                                    ->with('children')
+                                    ->get();
 
-                                return $data->isEmpty()
-                                    ? ['' => 'Kategori tidak ditemukan']
-                                    : $data;
+                                $options = [];
+                                foreach ($categories as $parent) {
+                                    if ($parent->children->isNotEmpty()) {
+                                        foreach ($parent->children as $child) {
+                                            $options[$parent->name][$child->id] = $child->name;
+                                        }
+                                    } else {
+                                        $options[$parent->id] = $parent->name;
+                                    }
+                                }
+
+                                return $options ?: ['' => 'Kategori tidak ditemukan'];
                             })
                             ->searchable()
                             ->preload()
                             ->disabled(fn() => CategoryModel::where('is_active', true)->count() === 0)
                             ->helperText(
-                                fn() =>
-                                CategoryModel::where('is_active', true)->count() === 0
+                                fn() => CategoryModel::where('is_active', true)->count() === 0
                                     ? 'Kategori tidak ditemukan'
                                     : null
                             ),
 
-                        Select::make('type')
-                            ->label('Jenis Produk')
-                            ->options([
-                                'food' => 'Makanan',
-                                'drink' => 'Minuman',
-                                'fashion' => 'Fashion',
-                            ])
-                            ->required(),
-
                         TextInput::make('name')
+                            ->label('Nama Produk')
                             ->required()
+                            ->maxLength(255)
                             ->live()
                             ->afterStateUpdated(function (Set $set, $state) {
                                 if ($state) {
@@ -73,22 +74,23 @@ class ProductForm
                             ->unique(ignoreRecord: true),
 
                         Textarea::make('description')
-                            ->rows(4),
+                            ->label('Deskripsi')
+                            ->nullable()
+                            ->rows(4)
+                            ->maxLength(5000),
 
-                        // 🔥 AUTO UMKM UNTUK OWNER
                         Select::make('umkm_id')
                             ->label('UMKM')
+                            ->nullable()
                             ->options(function () {
                                 $user = Auth::user();
 
-                                // Owner hanya lihat UMKM miliknya
                                 if ($user->role === 'owner') {
                                     return umkmModel::where('verification_status', 'approved')
                                         ->where('user_id', $user->id)
                                         ->pluck('name', 'id');
                                 }
 
-                                // Admin lihat semua
                                 $data = umkmModel::where('verification_status', 'approved')
                                     ->pluck('name', 'id');
 
@@ -99,24 +101,24 @@ class ProductForm
                             ->default(function () {
                                 $user = Auth::user();
                                 if ($user->role === 'owner') {
-                                    return $user->umkm?->id; // otomatis isi umkm_id milik owner
+                                    return $user->umkm?->id;
                                 }
                                 return null;
                             })
                             ->searchable()
                             ->visible(fn() => Auth::user()->role === 'admin')
                             ->required(fn() => Auth::user()->role === 'admin')
-                            ->dehydrated(true), // pastikan nilai terkirim meski hidden
-                    ])
-                    ->columns(1),
+                            ->dehydrated(true),
+
+                    ])->columns(1),
 
                 Section::make('Media & Status')
                     ->schema([
 
                         Toggle::make('is_active')
+                            ->label('Produk Aktif')
                             ->default(true),
 
-                        // ❗ HANYA UPLOAD, PENYIMPANAN DI HANDLE DI RESOURCE
                         FileUpload::make('images_temp')
                             ->label('Upload Gambar')
                             ->multiple()
@@ -124,9 +126,17 @@ class ProductForm
                             ->disk('public')
                             ->directory('temp')
                             ->maxFiles(3)
+                            ->maxSize(1024) // 1MB
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                            ->helperText('Format: JPG, PNG, WEBP • Maksimal 1MB per gambar • Maks 3 foto')
+                            ->validationMessages([
+                                'max'      => 'Ukuran gambar tidak boleh lebih dari 1MB.',
+                                'mimes'    => 'Format gambar tidak valid. Gunakan JPG, PNG, atau WEBP.',
+                                'maxFiles' => 'Maksimal 3 gambar yang dapat diupload.',
+                            ])
                             ->dehydrated(false),
 
-                    ])
+                    ]),
             ]);
     }
 }
