@@ -4,29 +4,56 @@ namespace App\Filament\Resources\Products\Pages;
 
 use App\Filament\Resources\Products\ProductResource;
 use App\Models\ProductImageModel;
+use App\Models\umkmModel;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
 class CreateProduct extends CreateRecord
 {
     protected static string $resource = ProductResource::class;
 
-    // FILTER ADMIN AND OWNER
-    public static function getEloquentQuery(): Builder
+    protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $query = parent::getEloquentQuery();
         $user = Auth::user();
 
         if ($user->role === 'owner') {
-            $query->where('umkm_id', $user->umkm_id);
+            $umkm = umkmModel::where('verification_status', 'approved')
+                ->where('user_id', $user->id)
+                ->first();
+
+            $data['umkm_id'] = $umkm?->id;
         }
 
-        return $query;
+        return $data;
     }
 
-    // ADD menambahkan gambar di form product dan di simpan di table gambar produk
+    public function mount(): void
+    {
+        $user = Auth::user();
+
+        if ($user->role === 'owner') {
+            $approved = umkmModel::where('verification_status', 'approved')
+                ->where('user_id', $user->id)
+                ->exists();
+
+            if (!$approved) {
+                Notification::make()
+                    ->title('UMKM Belum Terverifikasi')
+                    ->body('UMKM Anda masih dalam proses verifikasi. Harap tunggu persetujuan admin.')
+                    ->warning()
+                    ->seconds(5)
+                    ->send();
+
+                // ✅ Gunakan redirectRoute bukan $this->redirect()
+                $this->redirectRoute('filament.admin.resources.products.index');
+                return;
+            }
+        }
+
+        parent::mount();
+    }
+
     protected function afterCreate(): void
     {
         $images = $this->data['images_temp'] ?? [];
@@ -34,18 +61,18 @@ class CreateProduct extends CreateRecord
         foreach ($images as $index => $path) {
             ProductImageModel::create([
                 'product_id' => $this->record->id,
-                'path' => $path,
-                'is_main' => $index === 0,
+                'path'       => $path,
+                'is_main'    => $index === 0,
                 'sort_order' => $index,
             ]);
         }
     }
-    // ADD menambahkan gambar di form product dan di simpan di table gambar produk
 
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');
     }
+
     protected function getCreatedNotification(): ?Notification
     {
         return Notification::make()
@@ -57,7 +84,6 @@ class CreateProduct extends CreateRecord
     protected function getFormActions(): array
     {
         return [
-
             $this->getCreateFormAction()
                 ->label('Create')
                 ->icon('heroicon-o-check-circle')
@@ -73,7 +99,6 @@ class CreateProduct extends CreateRecord
                 ->url($this->getResource()::getUrl('index'))
                 ->icon('heroicon-o-x-mark')
                 ->color('gray'),
-
         ];
     }
 }

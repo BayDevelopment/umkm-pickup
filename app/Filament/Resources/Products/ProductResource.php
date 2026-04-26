@@ -13,6 +13,7 @@ use App\Filament\Resources\Products\Schemas\ProductInfolist;
 use App\Filament\Resources\Products\Tables\ProductsTable;
 use App\Models\Product;
 use App\Models\ProductModel;
+use App\Models\umkmModel;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -37,8 +38,8 @@ class ProductResource extends Resource
         $query = parent::getEloquentQuery();
         $user = Auth::user();
 
-        if ($user->role === 'owner') {
-            $query->where('umkm_id', $user->umkm_id);
+        if ($user?->role === 'owner') {
+            $query->where('umkm_id', $user->umkm?->id);
         }
 
         return $query;
@@ -98,7 +99,6 @@ class ProductResource extends Resource
     }
     protected static ?string $navigationLabel = 'Product';
     protected static ?int    $navigationSort  = 4;
-
     // LAST ADD
 
     public static function form(Schema $schema): Schema

@@ -24,20 +24,27 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (HttpException $e, $request) {
 
+            // Jika request dari Livewire/AJAX — jangan redirect, biarkan Filament handle sendiri
+            if ($request->ajax() || $request->wantsJson() || $request->is('livewire/*')) {
+                return null;
+            }
+
             if ($e->getStatusCode() === 403 && $request->is('admin*')) {
                 $user = Auth::user();
 
-                // Jika pending, jangan logout — redirect ke pending-approval
                 if ($user && $user->status === 'pending') {
-                    return redirect('/admin/pending-approval');
+                    return response()->redirectTo('/admin/pending-approval');
                 }
 
-                // Jika bukan admin sama sekali
+                if ($user && $user->role === 'owner') {
+                    return response()->redirectTo('/admin/products');
+                }
+
                 if (Auth::check()) {
                     Auth::logout();
                 }
 
-                return redirect('/admin/login')
+                return response()->redirectTo('/admin/login')
                     ->with('error', 'Anda bukan admin.');
             }
 

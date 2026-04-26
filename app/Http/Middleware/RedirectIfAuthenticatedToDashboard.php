@@ -9,11 +9,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RedirectIfAuthenticatedToDashboard
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
         if (Auth::check()) {
@@ -21,18 +16,18 @@ class RedirectIfAuthenticatedToDashboard
             $user = Auth::user();
 
             if ($user->role === 'admin') {
-                return redirect('/admin');
+                return response()->redirectTo('/admin'); // ✅ fix
             }
 
             if ($user->role === 'owner') {
-                return redirect('/admin');
+                return response()->redirectTo('/admin'); // ✅ fix
             }
 
             if ($user->role === 'customer') {
-                return redirect()->route('customer.dashboard');
+                return response()->redirectTo(route('customer.dashboard')); // ✅ fix
             }
 
-            return redirect('/');
+            return response()->redirectTo('/'); // ✅ fix
         }
 
         return $next($request);

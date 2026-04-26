@@ -27,39 +27,40 @@ class ProductForm
 
                         Select::make('category_id')
                             ->label('Kategori')
-                            ->nullable()
+                            ->required() // ✅ wajib
                             ->options(function () {
                                 $categories = CategoryModel::where('is_active', true)
                                     ->whereNull('parent_id')
-                                    ->with('children')
-                                    ->get();
+                                    ->pluck('name', 'id');
 
-                                $options = [];
-                                foreach ($categories as $parent) {
-                                    if ($parent->children->isNotEmpty()) {
-                                        foreach ($parent->children as $child) {
-                                            $options[$parent->name][$child->id] = $child->name;
-                                        }
-                                    } else {
-                                        $options[$parent->id] = $parent->name;
-                                    }
-                                }
-
-                                return $options ?: ['' => 'Kategori tidak ditemukan'];
+                                return $categories->isNotEmpty() ? $categories : [];
                             })
                             ->searchable()
                             ->preload()
-                            ->disabled(fn() => CategoryModel::where('is_active', true)->count() === 0)
+                            ->placeholder('Pilih Kategori')
+                            ->noSearchResultsMessage('Kategori tidak ditemukan.')
+                            ->searchPrompt('Ketik untuk mencari kategori...')
+                            ->loadingMessage('Memuat kategori...')
+                            ->disabled(fn() => CategoryModel::where('is_active', true)->whereNull('parent_id')->exists() === false)
                             ->helperText(
-                                fn() => CategoryModel::where('is_active', true)->count() === 0
-                                    ? 'Kategori tidak ditemukan'
+                                fn() => CategoryModel::where('is_active', true)->whereNull('parent_id')->exists() === false
+                                    ? '⚠️ Belum ada kategori aktif. Tambahkan kategori terlebih dahulu.'
                                     : null
-                            ),
+                            )
+                            ->rules([
+                                'required', // ✅ fix: sesuai dengan ->required()
+                                'exists:categories,id',
+                            ]),
 
                         TextInput::make('name')
                             ->label('Nama Produk')
                             ->required()
                             ->maxLength(255)
+                            ->rules([
+                                'required',
+                                'string',
+                                'max:255',
+                            ])
                             ->live()
                             ->afterStateUpdated(function (Set $set, $state) {
                                 if ($state) {
@@ -77,11 +78,15 @@ class ProductForm
                             ->label('Deskripsi')
                             ->nullable()
                             ->rows(4)
-                            ->maxLength(5000),
+                            ->maxLength(5000)
+                            ->rules([
+                                'nullable',
+                                'string',
+                                'max:5000',
+                            ]),
 
                         Select::make('umkm_id')
                             ->label('UMKM')
-                            ->nullable()
                             ->options(function () {
                                 $user = Auth::user();
 
@@ -94,21 +99,23 @@ class ProductForm
                                 $data = umkmModel::where('verification_status', 'approved')
                                     ->pluck('name', 'id');
 
-                                return $data->isEmpty()
-                                    ? ['' => 'UMKM tidak ditemukan']
-                                    : $data;
+                                return $data->isEmpty() ? [] : $data;
                             })
                             ->default(function () {
                                 $user = Auth::user();
                                 if ($user->role === 'owner') {
-                                    return $user->umkm?->id;
+                                    return $user->umkm?->id; // ← pastikan relasi umkm ada di User model
                                 }
                                 return null;
                             })
                             ->searchable()
                             ->visible(fn() => Auth::user()->role === 'admin')
                             ->required(fn() => Auth::user()->role === 'admin')
-                            ->dehydrated(true),
+                            ->dehydrated(true) // ✅ wajib ada agar value tetap terkirim meski hidden
+                            ->rules([
+                                'required',
+                                'exists:umkms,id',
+                            ]),
 
                     ])->columns(1),
 
@@ -117,16 +124,17 @@ class ProductForm
 
                         Toggle::make('is_active')
                             ->label('Produk Aktif')
-                            ->default(true),
+                            ->default(true)
+                            ->rules(['boolean']),
 
                         FileUpload::make('images_temp')
                             ->label('Upload Gambar')
                             ->multiple()
                             ->image()
-                            ->disk('public')
+                            ->disk('public')        // ← disk untuk final storage
                             ->directory('temp')
                             ->maxFiles(3)
-                            ->maxSize(1024) // 1MB
+                            ->maxSize(1024)
                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                             ->helperText('Format: JPG, PNG, WEBP • Maksimal 1MB per gambar • Maks 3 foto')
                             ->validationMessages([

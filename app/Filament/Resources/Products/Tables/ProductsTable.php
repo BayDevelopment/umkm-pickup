@@ -30,26 +30,23 @@ class ProductsTable
                 // 🔹 IMAGE
                 ImageColumn::make('image')
                     ->label('Image')
-                    ->getStateUsing(
-                        fn($record) => filled($record?->image)
-                            ? asset('storage/' . (is_array($record->image)
-                                ? $record->image[0]
-                                : $record->image))
-                            : asset('images/no-image.png')
-                    )
-                    ->width(50)
-                    ->circular(),
+                    ->disk('public')
+                    ->defaultImageUrl(asset('images/no-image.png'))
+                    ->circular()
+                    ->size(50),
 
-                // 🔹 NAME
+                // 🔹 NAME + SLUG
                 TextColumn::make('name')
-                    ->searchable(['name', 'slug'])
+                    ->searchable()
                     ->sortable()
                     ->weight('bold')
-                    ->limit(30),
+                    ->limit(30)
+                    ->description(fn($record) => $record->slug),
 
-                // 🔹 TYPE (BADGE 🔥)
+                // 🔹 TYPE
                 TextColumn::make('type')
                     ->badge()
+                    ->formatStateUsing(fn($state) => ucfirst($state))
                     ->color(fn($state) => match ($state) {
                         'food' => 'success',
                         'drink' => 'info',
@@ -61,9 +58,16 @@ class ProductsTable
                 TextColumn::make('category.name')
                     ->label('Kategori')
                     ->sortable()
-                    ->toggleable(),
+                    ->searchable()
+                    ->placeholder('-'),
 
-                // 🔹 VARIANT COUNT (kalau pakai variant)
+                // 🔹 PRICE (kalau ada di DB)
+                TextColumn::make('price')
+                    ->money('IDR')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                // 🔹 VARIANT COUNT
                 TextColumn::make('variants_count')
                     ->counts('variants')
                     ->label('Varian')
@@ -74,37 +78,42 @@ class ProductsTable
                     ->boolean()
                     ->label('Status')
                     ->trueIcon('heroicon-o-check-circle')
-                    ->falseIcon('heroicon-o-x-circle'),
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('danger'),
 
-                // 🔹 CREATED AT
+                // 🔹 CREATED
                 TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d M Y')
                     ->sortable()
                     ->toggleable(),
 
-                // 🔹 UMKM (HANYA ADMIN 🔐)
+                // 🔹 UMKM (ROLE BASED)
                 TextColumn::make('umkm.name')
                     ->label('UMKM')
-                    ->visible(fn() => Auth::user()->role === 'admin'),
+                    ->visible(fn() => Auth::user()?->role === 'admin')
+                    ->placeholder('-'),
             ])
 
             ->filters([
 
-                // 🔹 FILTER TYPE
+                // 🔹 TYPE
                 SelectFilter::make('type')
                     ->options([
                         'food' => 'Makanan',
                         'drink' => 'Minuman',
                         'fashion' => 'Fashion',
-                    ]),
+                    ])
+                    ->label('Tipe'),
 
-                // 🔹 FILTER CATEGORY
+                // 🔹 CATEGORY
                 SelectFilter::make('category_id')
                     ->relationship('category', 'name')
-                    ->label('Kategori'),
+                    ->label('Kategori')
+                    ->searchable(),
 
-                // 🔹 FILTER STATUS
+                // 🔹 STATUS
                 TernaryFilter::make('is_active')
                     ->label('Status'),
 
@@ -114,36 +123,25 @@ class ProductsTable
 
             ->recordActions([
                 ActionGroup::make([
-                    ViewAction::make()
-                        ->label('Lihat')
-                        ->icon('heroicon-o-eye')
-                        ->color('gray'),
+                    ViewAction::make(),
 
-                    EditAction::make()
-                        ->label('Edit')
-                        ->icon('heroicon-o-pencil-square')
-                        ->color('primary'),
+                    EditAction::make(),
 
                     DeleteAction::make()
-                        ->label('Hapus')
-                        ->icon('heroicon-o-trash')
-                        ->color('danger')
                         ->requiresConfirmation()
                         ->modalHeading('Hapus data?')
-                        ->modalDescription('Data yang dihapus tidak bisa dikembalikan.')
+                        ->modalDescription('Data tidak bisa dikembalikan!')
                         ->successNotification(
                             Notification::make()
-                                ->title('Terhapus')
-                                ->body('Data berhasil dihapus.')
+                                ->title('Berhasil')
+                                ->body('Data berhasil dihapus')
                                 ->success()
                         ),
                 ])
                     ->label('Aksi')
                     ->icon('heroicon-o-ellipsis-vertical')
                     ->button()
-                    ->outlined()
-                    ->tooltip('Aksi data')
-                    ->dropdownPlacement('bottom-end'),
+                    ->outlined(),
             ])
 
             ->toolbarActions([

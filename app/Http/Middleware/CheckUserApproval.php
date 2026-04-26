@@ -9,23 +9,27 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CheckUserApproval
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::user();
-
 
         if (!$user) {
             return $next($request);
         }
 
+        // Bypass semua Livewire & AJAX request
+        if (
+            $request->ajax() ||
+            $request->wantsJson() ||
+            $request->is('livewire/*') ||
+            $request->header('X-Livewire')
+        ) {
+            return $next($request);
+        }
+
         // Jika active, jangan bisa ke pending-approval
         if ($user->status === 'active' && $request->is('admin/pending-approval')) {
-            return redirect('/admin');
+            return response()->redirectTo('/admin');
         }
 
         // Jika pending, hanya boleh akses halaman tertentu
@@ -35,13 +39,12 @@ class CheckUserApproval
                 $request->is('admin/logout') ||
                 $request->is('admin/email-verification*') ||
                 $request->routeIs('filament.admin.auth.*') ||
-                $request->is('admin/u-m-k-m-s/create') ||
-                $request->is('livewire/*') // tambah ini
+                $request->is('admin/u-m-k-m-s/create')
             ) {
                 return $next($request);
             }
 
-            return redirect('/admin/pending-approval');
+            return response()->redirectTo('/admin/pending-approval');
         }
 
         return $next($request);
