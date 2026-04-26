@@ -16,6 +16,7 @@ use Filament\Actions\DissociateBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
@@ -31,29 +32,45 @@ use Filament\Tables\Table;
 class VariantsRelationManager extends RelationManager
 {
     protected static string $relationship = 'variants';
+
     public function form(Schema $schema): Schema
     {
         return $schema
             ->components([
                 Section::make('Detail Variant')
-                    ->icon('heroicon-o-squares-2x2')
+                    ->columnSpanFull()
                     ->schema([
+
                         Grid::make(2)->schema([
 
                             TextInput::make('sku')
                                 ->label('SKU')
                                 ->placeholder('Contoh: TS-MERAH-M')
-                                ->unique(ignoreRecord: true),
+                                ->nullable()
+                                ->columnSpanFull()
+                                ->unique(ignoreRecord: true)
+                                ->maxLength(100)
+                                ->rules([
+                                    'nullable',
+                                    'string',
+                                    'max:100',
+                                    'alpha_dash',         // hanya huruf, angka, - dan _
+                                    'unique:product_variants,sku', // pastikan unik di DB
+                                ]),
 
-                            TextInput::make('color')
-                                ->label('Warna')
-                                ->placeholder('Contoh: Merah'),
+                            KeyValue::make('attributes')
+                                ->label('Atribut Variant')
+                                ->keyLabel('Nama')
+                                ->valueLabel('Nilai')
+                                ->addButtonLabel('Tambah Atribut')
+                                ->nullable()
+                                ->columnSpanFull()
+                                ->rules([
+                                    'nullable',
+                                    'array',        // harus berupa array key-value
+                                    'max:10',       // maksimal 10 atribut
+                                ]),
 
-                            TextInput::make('size')
-                                ->label('Ukuran / Porsi')
-                                ->placeholder('Contoh: M, XL, 32, 44, Jumbo, 500gr')
-                                ->maxLength(50)
-                                ->nullable(),
                         ]),
 
                         Grid::make(2)->schema([
@@ -64,56 +81,74 @@ class VariantsRelationManager extends RelationManager
                                 ->required()
                                 ->prefix('Rp')
                                 ->minValue(0)
-                                ->placeholder('Contoh: 150000')
-                                ->live(onBlur: true)
-                                ->formatStateUsing(
-                                    fn($state) =>
-                                    $state ? number_format($state, 0, ',', '.') : null
-                                )
-                                ->dehydrateStateUsing(
-                                    fn($state) =>
-                                    str_replace('.', '', $state)
-                                ),
+                                ->maxValue(99999999) // maksimal 99 juta
+                                ->rules([
+                                    'required',
+                                    'numeric',
+                                    'min:0',
+                                    'max:99999999',
+                                ]),
+
                             Select::make('branch_id')
                                 ->label('Cabang')
                                 ->relationship('branch', 'name')
                                 ->searchable()
                                 ->preload()
-                                ->required(),
-                        ]),
-                        Grid::make(1)->schema([
-
-                            TextInput::make('stock')
-                                ->label('Stok')
-                                ->numeric()
-                                ->required()
-                                ->default(0)
-                                ->minValue(0)
-                                ->placeholder('Contoh: 100'),
+                                ->nullable()
+                                ->placeholder('Semua Cabang / Tidak ditentukan')
+                                ->noSearchResultsMessage('Cabang tidak ditemukan.')
+                                ->searchPrompt('Ketik untuk mencari cabang...')
+                                ->loadingMessage('Memuat cabang...')
+                                ->rules([
+                                    'nullable',
+                                    'exists:branches,id',
+                                ]),
 
                         ]),
-                    ]),
+
+                        TextInput::make('stock')
+                            ->label('Stok')
+                            ->numeric()
+                            ->required()
+                            ->default(0)
+                            ->minValue(0)
+                            ->maxValue(99999) // maksimal 99999 stok
+                            ->columnSpanFull()
+                            ->rules([
+                                'required',
+                                'integer',
+                                'min:0',
+                                'max:99999',
+                            ]),
+
+                    ])
             ]);
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('product_id')
+            ->recordTitleAttribute('sku')
             ->columns([
                 TextColumn::make('sku')
                     ->label('SKU')
                     ->searchable(),
 
-                TextColumn::make('color')
-                    ->label('Warna'),
+                TextColumn::make('attributes')
+                    ->label('Atribut')
+                    ->formatStateUsing(function ($state) {
+                        if (! $state) return '-';
 
-                TextColumn::make('size')
-                    ->label('Ukuran'),
+                        return collect($state)
+                            ->map(fn($v, $k) => ucfirst($k) . ': ' . $v)
+                            ->implode("\n");
+                    })
+                    ->wrap(),
 
                 TextColumn::make('price')
                     ->label('Harga')
                     ->money('IDR', locale: 'id'),
+
                 TextColumn::make('branch.name')
                     ->label('Cabang')
                     ->badge()
@@ -148,7 +183,7 @@ class VariantsRelationManager extends RelationManager
                     ->successNotification(
                         Notification::make()
                             ->title('Berhasil')
-                            ->body('Data berhasil ditambahkan.')
+                            ->body('Data variant berhasil ditambahkan.') // ← lebih spesifik
                             ->success()
                     )
 
@@ -177,7 +212,25 @@ class VariantsRelationManager extends RelationManager
                         ->label('Edit')
                         ->icon('heroicon-o-pencil-square')
                         ->color('primary')
-                        ->visible(fn($record) => ! $record->trashed()),
+                        ->visible(fn($record) => ! $record->trashed())
+                        ->modalSubmitAction(
+                            fn($action) => $action
+                                ->label('Simpan Perubahan')
+                                ->icon('heroicon-o-check-circle')
+                                ->color('success')
+                        )
+                        ->modalCancelAction(
+                            fn($action) => $action
+                                ->label('Batal')
+                                ->icon('heroicon-o-x-mark')
+                                ->color('gray')
+                        )
+                        ->successNotification(
+                            Notification::make()
+                                ->title('Berhasil')
+                                ->body('Data variant berhasil diupdate.')
+                                ->success()
+                        ),
 
                     DeleteAction::make()
                         ->label('Hapus')

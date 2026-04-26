@@ -20,18 +20,15 @@ class BranchForm
         return $schema->schema([
 
             /*
-            |--------------------------------------------------------------------------
-            | Informasi Dasar
-            |--------------------------------------------------------------------------
-            */
+        |--------------------------------------------------------------------------
+        | Informasi Dasar
+        |--------------------------------------------------------------------------
+        */
             Section::make('Informasi Dasar')
-                ->description('Detail utama cabang')
-                ->icon('heroicon-o-building-storefront')
                 ->schema([
 
                     TextInput::make('name')
                         ->label('Nama Cabang')
-                        ->placeholder('Contoh: Cabang Bandung Dago')
                         ->required()
                         ->maxLength(255)
                         ->live(debounce: 500)
@@ -39,187 +36,118 @@ class BranchForm
                             if ($state) {
                                 $set('slug', Str::slug($state));
                             }
-                        })
-                        ->validationMessages([
-                            'required' => 'Nama cabang wajib diisi ya!',
-                        ]),
+                        }),
 
                     TextInput::make('slug')
                         ->label('Slug')
+                        ->disabled()
+                        ->dehydrated()
                         ->required()
                         ->unique(ignoreRecord: true)
-                        ->maxLength(255)
-                        ->helperText('Otomatis dibuat dari nama cabang, tapi bisa diedit manual.')
-                        ->validationMessages([
-                            'required' => 'Slug wajib diisi',
-                            'unique' => 'Slug sudah digunakan cabang lain',
-                        ]),
+                        ->maxLength(255),
 
                     Toggle::make('is_active')
                         ->label('Cabang Aktif')
-                        ->default(true)
-                        ->inline(false),
+                        ->default(true),
 
                 ])
-                ->columns(2),
-
+                ->columns(1),
 
             /*
-            |--------------------------------------------------------------------------
-            | Lokasi
-            |--------------------------------------------------------------------------
-            */
+        |--------------------------------------------------------------------------
+        | Lokasi
+        |--------------------------------------------------------------------------
+        */
             Section::make('Lokasi')
-                ->description('Alamat lengkap cabang')
-                ->icon('heroicon-o-map-pin')
                 ->schema([
 
                     Textarea::make('address')
                         ->label('Alamat Lengkap')
-                        ->rows(3)
-                        ->columnSpanFull()
                         ->required()
-                        ->placeholder('Jl. Sudirman No. 45, RT.003/RW.002')
-                        ->validationMessages([
-                            'required' => 'Alamat wajib diisi',
-                        ]),
+                        ->rows(3)
+                        ->columnSpanFull(),
 
                     TextInput::make('city')
                         ->label('Kota / Kabupaten')
-                        ->required()
-                        ->placeholder('Jakarta Selatan'),
+                        ->required(),
 
                     TextInput::make('district')
-                        ->label('Kecamatan')
-                        ->placeholder('Setiabudi'),
+                        ->label('Kecamatan'),
 
                     TextInput::make('subdistrict')
-                        ->label('Kelurahan')
-                        ->placeholder('Karet Kuningan'),
+                        ->label('Kelurahan'),
 
                     TextInput::make('postal_code')
                         ->label('Kode Pos')
-                        ->maxLength(10)
-                        ->placeholder('12950'),
+                        ->maxLength(10),
 
                 ])
-                ->columns(2),
-
+                ->columns(1),
 
             /*
-            |--------------------------------------------------------------------------
-            | Koordinat & Operasional
-            |--------------------------------------------------------------------------
-            */
+        |--------------------------------------------------------------------------
+        | Koordinat & Operasional
+        |--------------------------------------------------------------------------
+        */
             Section::make('Koordinat & Operasional')
-                ->description('Lokasi GPS dan jam operasional cabang')
-                ->icon('heroicon-o-clock')
                 ->schema([
 
-                    Grid::make(2)
-                        ->schema([
+                    Grid::make(2)->schema([
 
-                            TextInput::make('latitude')
-                                ->label('Latitude')
-                                ->numeric()
-                                ->step('any') // supaya tidak error step
-                                ->minValue(-90)
-                                ->maxValue(90)
-                                ->placeholder('-6.208800')
-                                ->helperText('Contoh: -6.208800 (Range: -90 sampai 90)')
+                        TextInput::make('latitude')
+                            ->label('Latitude')
+                            ->numeric()
+                            ->step('any')
+                            ->minValue(-90)
+                            ->maxValue(90)
+                            ->nullable(),
 
-                                // auto format ke 6 desimal saat load
-                                ->formatStateUsing(
-                                    fn($state) =>
-                                    $state !== null ? number_format((float) $state, 6, '.', '') : null
-                                )
+                        TextInput::make('longitude')
+                            ->label('Longitude')
+                            ->numeric()
+                            ->step('any')
+                            ->minValue(-180)
+                            ->maxValue(180)
+                            ->nullable(),
 
-                                // auto format saat user input
-                                ->afterStateUpdated(
-                                    fn($state, callable $set) =>
-                                    $state !== null
-                                        ? $set('latitude', number_format((float) $state, 6, '.', ''))
-                                        : null
-                                )
+                    ]),
 
-                                ->validationMessages([
-                                    'numeric' => 'Latitude harus berupa angka',
-                                    'minValue' => 'Latitude minimal -90',
-                                    'maxValue' => 'Latitude maksimal 90',
-                                ]),
+                    Grid::make(2)->schema([
 
+                        TimePicker::make('opening_time')
+                            ->label('Jam Buka')
+                            ->seconds(false),
 
-                            TextInput::make('longitude')
-                                ->label('Longitude')
-                                ->numeric()
-                                ->step('any')
-                                ->minValue(-180)
-                                ->maxValue(180)
-                                ->placeholder('106.845600')
-                                ->helperText('Contoh: 106.845600 (Range: -180 sampai 180)')
+                        TimePicker::make('closing_time')
+                            ->label('Jam Tutup')
+                            ->seconds(false),
 
-                                ->formatStateUsing(
-                                    fn($state) =>
-                                    $state !== null ? number_format((float) $state, 6, '.', '') : null
-                                )
-
-                                ->afterStateUpdated(
-                                    fn($state, callable $set) =>
-                                    $state !== null
-                                        ? $set('longitude', number_format((float) $state, 6, '.', ''))
-                                        : null
-                                )
-
-                                ->validationMessages([
-                                    'numeric' => 'Longitude harus berupa angka',
-                                    'minValue' => 'Longitude minimal -180',
-                                    'maxValue' => 'Longitude maksimal 180',
-                                ]),
-
-                        ]),
-
-                    Grid::make(2)
-                        ->schema([
-
-                            TimePicker::make('opening_time')
-                                ->label('Jam Buka')
-                                ->seconds(false),
-
-                            TimePicker::make('closing_time')
-                                ->label('Jam Tutup')
-                                ->seconds(false),
-
-                        ]),
+                    ]),
 
                     TextInput::make('phone')
                         ->label('Nomor Telepon')
                         ->tel()
                         ->maxLength(20)
-                        ->placeholder('0812-3456-7890'),
+                        ->rules(['nullable', 'regex:/^[0-9+\-() ]+$/']),
 
                 ]),
 
-
             /*
-            |--------------------------------------------------------------------------
-            | Foto Cabang
-            |--------------------------------------------------------------------------
-            */
+        |--------------------------------------------------------------------------
+        | Foto Cabang
+        |--------------------------------------------------------------------------
+        */
             Section::make('Foto Cabang')
-                ->description('Upload hanya JPG, maksimal 1MB')
-                ->icon('heroicon-o-photo')
                 ->schema([
 
                     FileUpload::make('image')
                         ->label('Foto Cabang')
                         ->image()
-                        ->acceptedFileTypes(['image/jpeg', 'image/jpg'])
-                        ->maxSize(1024)
+                        ->disk('public') // 🔥 penting
                         ->directory('branches')
-                        ->imageResizeTargetWidth(800)
-                        ->imageResizeTargetHeight(600)
-                        ->nullable()
-                        ->helperText('Format: JPG saja, maksimal 1MB'),
+                        ->acceptedFileTypes(['image/jpeg'])
+                        ->maxSize(1024)
+                        ->nullable(),
 
                 ]),
 

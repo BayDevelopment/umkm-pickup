@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Products\Pages;
 
 use App\Filament\Resources\Products\ProductResource;
+use App\Models\umkmModel;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
@@ -16,15 +17,45 @@ class EditProduct extends EditRecord
 {
     protected static string $resource = ProductResource::class;
 
-    // FILTER OWNER AND ADMIN
+    // Cegah akses
+    public function mount(int|string $record): void
+    {
+        parent::mount($record);
+
+        $user = Auth::user();
+
+        if ($user->role === 'owner') {
+            // Cek apakah product ini milik owner yang login
+            if ($this->record->umkm_id !== $user->umkm?->id) {
+                Notification::make()
+                    ->title('Akses Ditolak')
+                    ->body('Anda tidak memiliki akses untuk mengedit product ini.')
+                    ->danger()
+                    ->seconds(5)
+                    ->send();
+
+                $this->redirect(ProductResource::getUrl('index'));
+                return;
+            }
+        }
+    }
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if (Auth::user()->role === 'owner') {
-            $data['umkm_id'] = Auth::user()->umkm_id;
+        $user = Auth::user();
+
+        if ($user->role === 'owner') {
+            $umkm = umkmModel::where('verification_status', 'approved')
+                ->where('user_id', $user->id)
+                ->first();
+
+            $data['umkm_id'] = $umkm?->id;
         }
 
         return $data;
     }
+
+    // Akhir cegah akses
 
     // ADD menambahkan gambar di form product dan di simpan di table gambar produk
     protected function afterSave(): void

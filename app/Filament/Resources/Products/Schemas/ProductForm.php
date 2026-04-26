@@ -127,23 +127,6 @@ class ProductForm
                             ->default(true)
                             ->rules(['boolean']),
 
-                        FileUpload::make('images_temp')
-                            ->label('Upload Gambar')
-                            ->multiple()
-                            ->image()
-                            ->disk('public')        // ← disk untuk final storage
-                            ->directory('temp')
-                            ->maxFiles(3)
-                            ->maxSize(1024)
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                            ->helperText('Format: JPG, PNG, WEBP • Maksimal 1MB per gambar • Maks 3 foto')
-                            ->validationMessages([
-                                'max'      => 'Ukuran gambar tidak boleh lebih dari 1MB.',
-                                'mimes'    => 'Format gambar tidak valid. Gunakan JPG, PNG, atau WEBP.',
-                                'maxFiles' => 'Maksimal 3 gambar yang dapat diupload.',
-                            ])
-                            ->dehydrated(false),
-
                     ]),
             ]);
     }

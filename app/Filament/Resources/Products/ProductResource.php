@@ -6,6 +6,7 @@ use App\Filament\Resources\Products\Pages\CreateProduct;
 use App\Filament\Resources\Products\Pages\EditProduct;
 use App\Filament\Resources\Products\Pages\ListProducts;
 use App\Filament\Resources\Products\Pages\ViewProduct;
+use App\Filament\Resources\Products\RelationManagers\ProductImagesRelationManager;
 use App\Filament\Resources\Products\RelationManagers\VariantsRelationManager;
 use App\Filament\Resources\Products\RelationManagers\VariantStocksRelationManager;
 use App\Filament\Resources\Products\Schemas\ProductForm;
@@ -32,51 +33,19 @@ class ProductResource extends Resource
     protected static ?string $recordTitleAttribute = 'name';
 
     // ADD
-    /*FILTER ADMIN DAN OWNER*/
-    public static function getEloquentQuery(): Builder
+    // FILTER & DELETE
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
         $query = parent::getEloquentQuery();
         $user = Auth::user();
 
-        if ($user?->role === 'owner') {
+        // Owner hanya bisa lihat product miliknya sendiri
+        if ($user->role === 'owner') {
             $query->where('umkm_id', $user->umkm?->id);
         }
 
         return $query;
-    }
-
-    // FILTER EDIT, VIEW & DELETE
-    public static function canEdit($record): bool
-    {
-        $user = Auth::user();
-
-        if ($user->role === 'owner') {
-            return $record->umkm_id === $user->umkm_id;
-        }
-
-        return true;
-    }
-
-    public static function canDelete($record): bool
-    {
-        $user = Auth::user();
-
-        if ($user->role === 'owner') {
-            return $record->umkm_id === $user->umkm_id;
-        }
-
-        return true;
-    }
-
-    public static function canView($record): bool
-    {
-        $user = Auth::user();
-
-        if ($user->role === 'owner') {
-            return $record->umkm_id === $user->umkm_id;
-        }
-
-        return true;
     }
 
     /*FILTER ADMIN DAN OWNER*/
@@ -120,6 +89,7 @@ class ProductResource extends Resource
     {
         return [
             VariantsRelationManager::class,
+            ProductImagesRelationManager::class,
         ];
     }
 

@@ -28,13 +28,18 @@ class ProductsTable
             ->columns([
 
                 // 🔹 IMAGE
-                ImageColumn::make('image')
-                    ->label('Image')
+                ImageColumn::make('images.path')
+                    ->label('Gambar')
                     ->disk('public')
                     ->defaultImageUrl(asset('images/no-image.png'))
                     ->circular()
-                    ->size(50),
-
+                    ->size(50)
+                    ->getStateUsing(
+                        fn($record) =>
+                        $record->images->where('is_main', true)->first()?->path
+                            ? asset('storage/' . $record->images->where('is_main', true)->first()?->path)
+                            : null
+                    ),
                 // 🔹 NAME + SLUG
                 TextColumn::make('name')
                     ->searchable()
@@ -43,16 +48,6 @@ class ProductsTable
                     ->limit(30)
                     ->description(fn($record) => $record->slug),
 
-                // 🔹 TYPE
-                TextColumn::make('type')
-                    ->badge()
-                    ->formatStateUsing(fn($state) => ucfirst($state))
-                    ->color(fn($state) => match ($state) {
-                        'food' => 'success',
-                        'drink' => 'info',
-                        'fashion' => 'warning',
-                        default => 'gray',
-                    }),
 
                 // 🔹 CATEGORY
                 TextColumn::make('category.name')

@@ -59,9 +59,15 @@ class CreateProduct extends CreateRecord
         $images = $this->data['images_temp'] ?? [];
 
         foreach ($images as $index => $path) {
+            $filename = basename($path);
+            $newPath = 'products/' . $filename;
+
+            \Illuminate\Support\Facades\Storage::disk('public')
+                ->move($path, $newPath);
+
             ProductImageModel::create([
                 'product_id' => $this->record->id,
-                'path'       => $path,
+                'path'       => $newPath,
                 'is_main'    => $index === 0,
                 'sort_order' => $index,
             ]);
