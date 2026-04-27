@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\OrderStatusUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -12,8 +13,9 @@ class OrderModel extends Model
     use HasFactory, SoftDeletes;
     protected $table = 'orders';
     protected $fillable = [
+        'order_code',            // 🔥 wajib
         'user_id',
-        'branch_id', // 🔥 tambahin ini
+        'branch_id',
         'payment_method_id',
         'total_price',
         'bank_name',
@@ -22,6 +24,7 @@ class OrderModel extends Model
         'payment_proof',
         'payment_status',
         'status',
+        'stock_restored',        // 🔥 penting untuk logic
     ];
 
     protected $casts = [
@@ -47,9 +50,18 @@ class OrderModel extends Model
         return $this->belongsTo(BranchModel::class, 'branch_id');
     }
 
-    // gabungan dengan websocket pusher
     protected static function booted()
     {
+        // =========================
+        // 🔥 GENERATE ORDER CODE
+        // =========================
+        static::creating(function ($order) {
+            $order->order_code = 'ORD-' . now()->format('YmdHis') . rand(100, 999);
+        });
+
+        // =========================
+        // 🔥 AFTER UPDATE
+        // =========================
         static::updated(function (OrderModel $order) {
 
             // =========================
@@ -65,7 +77,6 @@ class OrderModel extends Model
                     $order->loadMissing('items.variant');
 
                     foreach ($order->items as $item) {
-
                         if ($item->variant) {
                             $item->variant->increment(
                                 'stock',
@@ -83,14 +94,11 @@ class OrderModel extends Model
             // =========================
             // 🔥 REALTIME (WEBSOCKET)
             // =========================
-
-            // hanya broadcast kalau status berubah
             if ($order->wasChanged(['status', 'payment_status'])) {
 
                 $order->refresh();
 
-                // broadcast(new \App\Events\OrderStatusUpdated($order))->toOthers();
-                broadcast(new \App\Events\OrderStatusUpdated($order));
+                broadcast(new OrderStatusUpdated($order));
             }
         });
     }

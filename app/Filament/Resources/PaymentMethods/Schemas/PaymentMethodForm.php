@@ -17,7 +17,8 @@ class PaymentMethodForm
                 Section::make('Informasi Metode Pembayaran')
                     ->description('Data rekening tujuan yang akan ditampilkan kepada customer saat checkout.')
                     ->icon('heroicon-o-credit-card')
-                    ->columns(2)
+                    ->columnSpanFull()
+                    ->columns(1)
                     ->schema([
 
                         TextInput::make('name')
@@ -26,28 +27,46 @@ class PaymentMethodForm
                             ->prefixIcon('heroicon-o-wallet')
                             ->required()
                             ->maxLength(255)
+                            ->validationMessages([
+                                'required' => 'Nama metode pembayaran wajib diisi.',
+                                'max' => 'Nama metode maksimal 255 karakter.',
+                            ])
                             ->columnSpan(2),
 
                         TextInput::make('bank_name')
                             ->label('Nama Bank')
                             ->placeholder('Contoh: BCA, BRI, Mandiri')
                             ->prefixIcon('heroicon-o-building-library')
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->validationMessages([
+                                'max' => 'Nama bank maksimal 255 karakter.',
+                            ]),
 
                         TextInput::make('account_number')
                             ->label('Nomor Rekening')
                             ->placeholder('Contoh: 1234567890')
                             ->prefixIcon('heroicon-o-hashtag')
-                            ->tel()
-                            ->numeric() // hanya angka
+                            ->numeric()
+                            ->required()
                             ->maxLength(30)
-                            ->required(),
+                            ->unique(ignoreRecord: true)
+                            ->validationMessages([
+                                'required' => 'Nomor rekening wajib diisi.',
+                                'numeric' => 'Nomor rekening hanya boleh angka.',
+                                'max' => 'Nomor rekening maksimal 30 digit.',
+                                'unique' => 'Nomor rekening sudah digunakan.',
+                            ]),
 
                         TextInput::make('account_name')
                             ->label('Atas Nama')
                             ->placeholder('Contoh: PT Trendora')
                             ->prefixIcon('heroicon-o-user')
-                            ->maxLength(255),
+                            ->required()
+                            ->maxLength(255)
+                            ->validationMessages([
+                                'required' => 'Nama pemilik rekening wajib diisi.',
+                                'max' => 'Nama pemilik maksimal 255 karakter.',
+                            ]),
 
                         Toggle::make('is_active')
                             ->label('Aktifkan Metode Pembayaran')

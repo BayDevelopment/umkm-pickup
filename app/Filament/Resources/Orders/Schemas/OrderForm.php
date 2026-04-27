@@ -2,9 +2,7 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
-use App\Models\User;
-use App\Models\PayMethodModel;
-use App\Models\ProductVariantModel;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -17,8 +15,12 @@ class OrderForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
-            ->columns(1) // 🔥 bikin semua section full width
+            ->columns(1)
             ->components([
+
+                // 🔒 order_code tidak ditampilkan & tidak dikirim dari client
+                Hidden::make('order_code')
+                    ->dehydrated(false),
 
                 Section::make('Informasi Order')
                     ->schema([
@@ -27,63 +29,100 @@ class OrderForm
                             ->label('Customer')
                             ->relationship('user', 'name')
                             ->searchable()
-                            ->required(),
+                            ->required()
+                            ->validationMessages([
+                                'required' => 'Customer wajib dipilih.',
+                            ]),
 
                         Select::make('payment_method_id')
                             ->label('Metode Pembayaran')
-                            ->relationship('paymentMethod', 'name')
-                            ->searchable(),
-
-                        Grid::make(2)
-                            ->schema([
-
-                                Select::make('status')
-                                    ->options([
-                                        'pending' => 'Pending',
-                                        'process' => 'Process',
-                                        'done'    => 'Done',
-                                        'cancel'  => 'Cancel',
-                                    ])
-                                    ->required(),
-
-                                Select::make('payment_status')
-                                    ->options([
-                                        'pending'  => 'Pending',
-                                        'paid'     => 'Paid',
-                                        'rejected' => 'Rejected',
-                                    ])
-                                    ->required(),
-
+                            ->relationship(
+                                'paymentMethod',
+                                'name',
+                                fn($q) => $q->where('is_active', true)
+                            )
+                            ->searchable()
+                            ->validationMessages([
+                                'required' => 'Metode pembayaran wajib dipilih.',
                             ]),
 
+                        Grid::make(2)->schema([
+
+                            Select::make('status')
+                                ->options([
+                                    'pending' => 'Pending',
+                                    'process' => 'Process',
+                                    'done'    => 'Done',
+                                    'cancel'  => 'Cancel',
+                                ])
+                                ->required()
+                                ->validationMessages([
+                                    'required' => 'Status order wajib dipilih.',
+                                ]),
+
+                            Select::make('payment_status')
+                                ->options([
+                                    'pending'  => 'Pending',
+                                    'paid'     => 'Paid',
+                                    'rejected' => 'Rejected',
+                                ])
+                                ->required()
+                                ->validationMessages([
+                                    'required' => 'Status pembayaran wajib dipilih.',
+                                ]),
+
+                        ]),
                     ])
-                    ->columnSpanFull(), // 🔥 optional biar makin tegas full
+                    ->columnSpanFull(),
 
                 Section::make('Items Pesanan')
                     ->schema([
 
                         Repeater::make('items')
                             ->relationship()
+                            ->minItems(1)
+                            ->validationMessages([
+                                'min_items' => 'Minimal harus ada 1 item.',
+                            ])
                             ->schema([
 
                                 Select::make('product_variant_id')
                                     ->label('Product Variant')
                                     ->relationship('variant', 'sku')
-                                    ->searchable()
-                                    ->required(),
+                                    ->preload() // 🔥 tampil langsung
+                                    ->searchable() // 🔥 tetap bisa search
+                                    ->required()
+                                    ->validationMessages([
+                                        'required' => 'Variant wajib dipilih.',
+                                    ]),
 
                                 TextInput::make('quantity')
                                     ->numeric()
+                                    ->minValue(1)
                                     ->required()
-                                    ->minValue(1),
+                                    ->validationMessages([
+                                        'required' => 'Jumlah wajib diisi.',
+                                        'numeric'  => 'Jumlah harus berupa angka.',
+                                        'min'      => 'Jumlah minimal 1.',
+                                    ]),
 
+                                // 🔒 price tidak boleh dipercaya dari client
                                 TextInput::make('price')
                                     ->numeric()
-                                    ->required(),
+                                    ->minValue(0)
+                                    ->required()
+                                    ->dehydrated(false) // tidak dikirim
+                                    ->validationMessages([
+                                        'required' => 'Harga wajib diisi.',
+                                        'numeric'  => 'Harga harus berupa angka.',
+                                        'min'      => 'Harga tidak boleh negatif.',
+                                    ]),
 
+                                // 🔒 subtotal hanya tampilan
                                 TextInput::make('subtotal')
                                     ->numeric()
-                                    ->disabled(),
+                                    ->disabled()
+                                    ->dehydrated(false) // 🔥 tidak dikirim ke server
 
                             ])
                             ->columns(4)
@@ -96,7 +135,8 @@ class OrderForm
                     ->schema([
                         TextInput::make('total_price')
                             ->numeric()
-                            ->disabled(),
+                            ->disabled()
+                            ->dehydrated(false), // dihitung di backend
                     ])
                     ->columnSpanFull(),
 

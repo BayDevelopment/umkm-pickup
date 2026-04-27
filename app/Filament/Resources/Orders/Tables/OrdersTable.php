@@ -28,10 +28,11 @@ class OrdersTable
     {
         return $table
             ->columns([
-                TextColumn::make('id')
+
+                TextColumn::make('order_code')
                     ->label('Order ID')
-                    ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
 
                 TextColumn::make('user.name')
                     ->label('Customer')
@@ -48,7 +49,7 @@ class OrdersTable
                     ->colors([
                         'warning' => 'pending',
                         'success' => 'paid',
-                        'danger' => 'rejected',
+                        'danger'  => 'rejected',
                     ])
                     ->sortable(),
 
@@ -56,14 +57,24 @@ class OrdersTable
                     ->label('Order Status')
                     ->colors([
                         'warning' => 'pending',
-                        'primary' => 'processing',
-                        'success' => 'completed',
-                        'danger' => 'cancelled',
+                        'primary' => 'process',
+                        'success' => 'done',
+                        'danger'  => 'cancel',
                     ])
                     ->sortable(),
 
+                TextColumn::make('paymentMethod.name')
+                    ->label('Metode')
+                    ->default('-'),
+
                 ImageColumn::make('payment_proof')
-                    ->getStateUsing(fn($record) => asset('storage/' . $record->payment_proof))
+                    ->label('Bukti')
+                    ->getStateUsing(
+                        fn($record) =>
+                        $record->payment_proof
+                            ? asset('storage/' . $record->payment_proof)
+                            : null
+                    )
                     ->circular()
                     ->width(50),
 
@@ -71,6 +82,7 @@ class OrdersTable
                     ->label('Tanggal')
                     ->dateTime('d M Y H:i')
                     ->sortable(),
+
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([

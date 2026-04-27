@@ -12,17 +12,18 @@ return new class extends Migration
             $table->id();
 
             $table->string('name'); // contoh: Transfer Bank, E-Wallet
-            $table->string('bank_name')->nullable(); // BCA, BRI, dll
-            $table->string('account_number')->nullable();
-            $table->string('account_name')->nullable();
+            $table->string('bank_name')->nullable(); // hanya untuk bank
+            $table->string('account_number')->unique(); // wajib & unik
+            $table->string('account_name'); // wajib
 
             $table->boolean('is_active')->default(true);
 
             $table->softDeletes();
             $table->timestamps();
 
-            // Optional index (biar cepat filter aktif)
+            // Index untuk performa
             $table->index('is_active');
+            $table->index('name');
         });
     }
 
