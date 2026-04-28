@@ -22,15 +22,38 @@
 
                         <div class="order-left">
                             <div class="order-id">
-                                Order #{{ $order->id }}
+                                Order #{{ $order->order_code }}
                             </div>
 
                             <div class="order-date">
                                 {{ $order->created_at->format('d M Y H:i') }}
                             </div>
-                            <div class="order-branch">
-                                <i class="fa-solid fa-store branch-icon"></i>
-                                <span>{{ $order->branch->name ?? 'Tidak tersedia' }}</span>
+
+                            {{-- UMKM & Branch --}}
+                            @php
+                                // Ambil umkm dari item pertama
+                                $umkm = $order->items->first()?->variant?->product?->umkm;
+                            @endphp
+
+                            {{-- UMKM & Branch --}}
+                            <div class="d-flex align-items-center gap-2 mt-1 mb-2">
+                                @if ($umkm)
+                                    <span class="badge px-2 py-1"
+                                        style="background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.7rem; border: 1px solid rgba(99,102,241,0.4);">
+                                        <i class="fa-solid fa-store me-1"></i>{{ $umkm->name }}
+                                    </span>
+                                @endif
+
+                                @if ($umkm && $order->branch)
+                                    <span style="color: #475569;">|</span>
+                                @endif
+
+                                @if ($order->branch)
+                                    <span class="badge px-2 py-1"
+                                        style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.7rem; border: 1px solid rgba(16,185,129,0.3);">
+                                        <i class="fa-solid fa-location-dot me-1"></i>{{ $order->branch->name }}
+                                    </span>
+                                @endif
                             </div>
 
                             <span id="order-status-{{ $order->id }}" class="order-badge {{ $statusColor }}">
@@ -42,7 +65,6 @@
                             <div class="order-price">
                                 Rp {{ number_format($order->total_price, 0, ',', '.') }}
                             </div>
-
 
                             <a href="{{ route('customer.orders.show', $order->id) }}"
                                 class="btn-modern d-inline-flex align-items-center gap-2 text-decoration-none">

@@ -32,6 +32,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->brandName(new HtmlString(
                 '<span style="font-style: italic; font-weight: 400;">UMKM</span><span style="font-weight: 700;font-style: italic;">Panel</span>'
             ))

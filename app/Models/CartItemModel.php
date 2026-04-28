@@ -11,6 +11,7 @@ class CartItemModel extends Model
         'cart_id',
         'variant_id',
         'qty',
+        'price'
     ];
 
     public function variant()

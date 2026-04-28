@@ -47,6 +47,12 @@ class ProductModel extends Model
         return $this->hasMany(ProductImageModel::class, 'product_id');
     }
 
+    public function mainImage()
+    {
+        return $this->hasOne(ProductImageModel::class, 'product_id')
+            ->where('is_main', 1);
+    }
+
     public function branches()
     {
         return $this->belongsToMany(
@@ -86,12 +92,6 @@ class ProductModel extends Model
     public function getIsNewAttribute()
     {
         return $this->created_at?->diffInDays(now()) < 4;
-    }
-
-    public function getMainImageAttribute()
-    {
-        return $this->images()->where('is_main', true)->value('path')
-            ?? $this->images()->value('path');
     }
 
     /*

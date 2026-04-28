@@ -2,9 +2,26 @@
     <div class="container d-flex align-items-center justify-content-between">
 
         {{-- BRAND --}}
-        <a class="navbar-brand td-brand" href="#">
-            Trendora
+        <a class="navbar-brand td-brand" href="{{ url('/') }}">
+            <span class="trendora">Trendora</span><span class="pick">Pick</span>
         </a>
+        <style>
+            .td-brand {
+                font-family: 'Poppins', sans-serif;
+                font-size: 24px;
+            }
+
+            .trendora {
+                font-style: italic;
+                font-weight: 300;
+                /* semi bold */
+            }
+
+            .pick {
+                font-weight: 600;
+                font-style: italic;
+            }
+        </style>
 
         {{-- RIGHT SIDE (MOBILE CART + TOGGLER) --}}
         <div class="d-flex align-items-center gap-3">

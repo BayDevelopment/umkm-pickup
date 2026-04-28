@@ -36,12 +36,12 @@ class OrderForm
 
                         Select::make('payment_method_id')
                             ->label('Metode Pembayaran')
-                            ->relationship(
-                                'paymentMethod',
-                                'name',
-                                fn($q) => $q->where('is_active', true)
-                            )
+                            ->relationship('paymentMethod', 'name')
                             ->searchable()
+                            ->preload()
+                            ->required()
+                            ->native(false)
+                            ->placeholder('Pilih metode pembayaran...')
                             ->validationMessages([
                                 'required' => 'Metode pembayaran wajib dipilih.',
                             ]),

@@ -12,57 +12,74 @@
 
                         @foreach ($cart->items as $item)
                             @php
-                                $subtotal = $item->variant->price * $item->qty;
+                                $product = $item->variant?->product ?? null;
+                                $subtotal = ($item->variant->price ?? 0) * $item->qty;
                                 $grandTotal += $subtotal;
+                                $imgPath = $product?->mainImage?->path
+                                    ? asset('storage/' . $product->mainImage->path)
+                                    : asset('images/no-image.png');
                             @endphp
 
                             <div class="td-cart-card mb-3 p-4 rounded-4 shadow-sm">
-
                                 <div class="d-flex flex-column flex-lg-row align-items-start gap-4">
 
-                                    {{-- LEFT SECTION (IMAGE + INFO + QTY) --}}
+                                    {{-- LEFT SECTION --}}
                                     <div class="d-flex gap-3 flex-grow-1">
 
                                         {{-- IMAGE --}}
                                         <div class="td-cart-img">
-                                            <img src="{{ $item->variant->product->image && count($item->variant->product->image)
-                                                ? asset('storage/' . $item->variant->product->image[0])
-                                                : asset('images/no-image.png') }}"
-                                                alt="{{ $item->variant->product->name }}">
+                                            <img src="{{ $imgPath }}" alt="{{ $product?->name ?? 'Produk' }}"
+                                                onerror="this.src='{{ asset('images/no-image.png') }}'; this.onerror=null;">
                                         </div>
 
                                         {{-- INFO --}}
                                         <div class="flex-grow-1">
 
+                                            {{-- UMKM & Branch --}}
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                @if ($product?->umkm)
+                                                    <span class="badge px-2 py-1"
+                                                        style="background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.7rem; border: 1px solid rgba(99,102,241,0.4);">
+                                                        <i class="fa-solid fa-store me-1"></i>{{ $product->umkm->name }}
+                                                    </span>
+                                                @endif
+
+                                                @if ($product?->umkm && $item->variant?->branch)
+                                                    <span style="color: #475569;">|</span>
+                                                @endif
+
+                                                @if ($item->variant?->branch)
+                                                    <span class="badge px-2 py-1"
+                                                        style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.7rem; border: 1px solid rgba(16,185,129,0.3);">
+                                                        <i
+                                                            class="fa-solid fa-location-dot me-1"></i>{{ $item->variant->branch->name }}
+                                                    </span>
+                                                @endif
+                                            </div>
+
                                             <h6 class="fw-semibold text-white mb-1">
-                                                {{ $item->variant->product->name }}
+                                                {{ $product?->name ?? '-' }}
                                             </h6>
 
+                                            {{-- ATTRIBUTES --}}
                                             <div class="text-secondary small mb-2">
-                                                {{ $item->variant->color }}
-                                                {{ $item->variant->size ? '• ' . $item->variant->size : '' }}
-
-                                                @if ($item->variant->branch)
-                                                    • {{ $item->variant->branch->name }}
+                                                @if ($item->variant?->attributes)
+                                                    {{ collect($item->variant->attributes)->map(fn($v, $k) => ucfirst($k) . ': ' . $v)->implode(' • ') }}
                                                 @endif
                                             </div>
 
                                             {{-- PRICE --}}
                                             <div class="text-white fw-medium mb-2">
-                                                Rp {{ number_format($item->variant->price, 0, ',', '.') }}
+                                                Rp {{ number_format($item->variant->price ?? 0, 0, ',', '.') }}
                                             </div>
 
                                             {{-- QTY --}}
                                             <div class="td-qty-control">
-
                                                 <button type="button" class="qty-minus">−</button>
-
                                                 <input type="number" value="{{ $item->qty }}" min="1"
                                                     max="{{ $item->variant->stock }}"
                                                     data-price="{{ $item->variant->price }}" class="cart-qty">
-
                                                 <button type="button" class="qty-plus">+</button>
-
                                             </div>
 
                                             <div class="td-stock small text-secondary mt-1">
@@ -70,10 +87,9 @@
                                             </div>
 
                                         </div>
-
                                     </div>
 
-                                    {{-- RIGHT SECTION (SUBTOTAL + DELETE) --}}
+                                    {{-- RIGHT SECTION --}}
                                     <div class="d-flex flex-column align-items-end justify-content-between gap-3">
 
                                         <div class="fw-bold fs-5 text-white cart-subtotal"

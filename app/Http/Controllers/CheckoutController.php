@@ -39,20 +39,21 @@ class CheckoutController extends Controller
 
             $data = session('buy_now');
 
-            // ✅ VALIDASI EXPIRED
             if (
                 !$data ||
                 !isset($data['expired_at']) ||
                 now()->timestamp > $data['expired_at']
             ) {
                 session()->forget('buy_now');
-
                 return redirect()->route('customer.product')
                     ->with('error', 'Session Buy Now sudah expired');
             }
 
-            $variant = ProductVariantModel::with(['product', 'branch'])
-                ->find($data['variant_id']);
+            $variant = ProductVariantModel::with([
+                'product.mainImage', // ✅
+                'product.umkm',      // ✅
+                'branch'
+            ])->find($data['variant_id']);
 
             if (!$variant) {
                 return redirect()->route('customer.product')
@@ -74,19 +75,19 @@ class CheckoutController extends Controller
 
             $buyNowItem = (object)[
                 'variant' => $variant,
-                'qty' => $data['qty']
+                'qty'     => $data['qty']
             ];
 
             $paymentMethods = PayMethodModel::where('is_active', true)->get();
 
             return view('customer.checkout', [
-                'title' => 'Buat Pesanan | Trendora',
-                'navlink' => 'Buat Pesanan',
-                'buyNowItem' => $buyNowItem,
-                'branches' => $branches,
+                'title'          => 'Buat Pesanan | Trendora',
+                'navlink'        => 'Buat Pesanan',
+                'buyNowItem'     => $buyNowItem,
+                'branches'       => $branches,
                 'paymentMethods' => $paymentMethods,
-                'total' => $variant->price * $data['qty'],
-                'isBuyNow' => true
+                'total'          => $variant->price * $data['qty'],
+                'isBuyNow'       => true
             ]);
         }
 
@@ -97,7 +98,8 @@ class CheckoutController extends Controller
         */
 
         $cart = CartModel::with([
-            'items.variant.product',
+            'items.variant.product.mainImage', // ✅
+            'items.variant.product.umkm',      // ✅
             'items.variant.branch'
         ])
             ->where('user_id', $user->id)
@@ -131,7 +133,7 @@ class CheckoutController extends Controller
             }
         }
 
-        // ✅ VALIDASI STRICT SINGLE BRANCH
+        // VALIDASI STRICT SINGLE BRANCH
         $branchIds = $items->pluck('variant.branch_id')->unique();
 
         if ($branchIds->count() > 1) {
@@ -150,18 +152,16 @@ class CheckoutController extends Controller
 
         $paymentMethods = PayMethodModel::where('is_active', true)->get();
 
-        $total = $items->sum(function ($item) {
-            return $item->variant->price * $item->qty;
-        });
+        $total = $items->sum(fn($item) => $item->variant->price * $item->qty);
 
         return view('customer.checkout', [
-            'title' => 'Checkout | Trendora',
-            'navlink' => 'Checkout',
-            'cart' => $cart,
-            'branches' => $branches,
+            'title'          => 'Checkout | Trendora',
+            'navlink'        => 'Checkout',
+            'cart'           => $cart,
+            'branches'       => $branches,
             'paymentMethods' => $paymentMethods,
-            'total' => $total,
-            'isBuyNow' => false
+            'total'          => $total,
+            'isBuyNow'       => false
         ]);
     }
     /*
@@ -173,16 +173,15 @@ class CheckoutController extends Controller
     {
         $user = Auth::user();
 
-        // ✅ FIX: VALIDASI USER
         if (!$user) {
             abort(403);
         }
 
         $request->validate([
             'payment_method_id' => 'required|exists:payment_methods,id',
-            'branch_id' => 'required|exists:branches,id',
-            'variant_id' => 'nullable|exists:product_variants,id',
-            'qty' => 'nullable|integer|min:1|max:100',
+            'branch_id'         => 'required|exists:branches,id',
+            'variant_id'        => 'nullable|exists:product_variants,id',
+            'qty'               => 'nullable|integer|min:1|max:100',
         ]);
 
         try {
@@ -206,8 +205,8 @@ class CheckoutController extends Controller
                 }
 
                 /*
-                |---------------- BUY NOW ----------------|
-                */
+            |---------------- BUY NOW ----------------|
+            */
                 if ($request->filled('variant_id') && $request->filled('qty')) {
 
                     $variant = ProductVariantModel::lockForUpdate()
@@ -229,36 +228,37 @@ class CheckoutController extends Controller
                     $totalPrice = $variant->price * $request->qty;
 
                     $order = OrderModel::create([
-                        'user_id' => $user->id,
-                        'branch_id' => $variant->branch_id,
-                        'payment_method_id' => $payment->id,
-                        'total_price' => $totalPrice,
-                        'bank_name' => $payment->bank_name,
-                        'bank_account_number' => $payment->account_number,
-                        'bank_account_name' => $payment->account_name,
-                        'payment_status' => 'pending',
-                        'status' => 'pending',
-                        'note' => $request->note
+                        'user_id'              => $user->id,
+                        'branch_id'            => $variant->branch_id,
+                        'payment_method_id'    => $payment->id,
+                        'total_price'          => $totalPrice,
+                        'bank_name'            => $payment->bank_name,
+                        'bank_account_number'  => $payment->account_number,
+                        'bank_account_name'    => $payment->account_name,
+                        'payment_status'       => 'pending',
+                        'status'               => 'pending',
+                        'note'                 => $request->note,
                     ]);
 
                     OrderItemModel::create([
-                        'order_id' => $order->id,
-                        'product_variant_id' => $variant->id,
-                        'quantity' => $request->qty,
-                        'price' => $variant->price,
-                        'subtotal' => $totalPrice,
-                        'product_name' => $variant->product->name,
-                        'variant_sku' => $variant->sku,
-                        'variant_color' => $variant->color,
-                        'variant_size' => $variant->size,
+                        'order_id'            => $order->id,
+                        'product_variant_id'  => $variant->id,
+                        'quantity'            => $request->qty,
+                        'price'               => $variant->price,
+                        'subtotal'            => $totalPrice,
+                        'product_name'        => $variant->product->name,
+                        'variant_sku'         => $variant->sku,
+                        'variant_attributes'  => $variant->attributes, // ✅
                     ]);
 
                     $variant->decrement('stock', $request->qty);
-                }
 
-                /*
-                |---------------- CART MODE (FIXED) ----------------|
-                */ else {
+                    session()->forget('buy_now'); // ✅ clear session setelah order
+
+                    /*
+            |---------------- CART MODE ----------------|
+            */
+                } else {
 
                     $cart = CartModel::with(['items.variant.product'])
                         ->where('user_id', $user->id)
@@ -268,7 +268,6 @@ class CheckoutController extends Controller
                         throw new \Exception('invalid');
                     }
 
-                    // ✅ FIX: VALIDASI CABANG GLOBAL
                     $branchIds = $cart->items->pluck('variant.branch_id')->unique();
 
                     if ($branchIds->count() > 1) {
@@ -277,22 +276,21 @@ class CheckoutController extends Controller
 
                     $realBranchId = $branchIds->first();
 
-                    // ✅ FIX: CEK MANIPULASI
                     if ($request->branch_id != $realBranchId) {
                         throw new \Exception('invalid');
                     }
 
                     $order = OrderModel::create([
-                        'user_id' => $user->id,
-                        'branch_id' => $realBranchId,
-                        'payment_method_id' => $payment->id,
-                        'total_price' => 0,
-                        'bank_name' => $payment->bank_name,
+                        'user_id'             => $user->id,
+                        'branch_id'           => $realBranchId,
+                        'payment_method_id'   => $payment->id,
+                        'total_price'         => 0,
+                        'bank_name'           => $payment->bank_name,
                         'bank_account_number' => $payment->account_number,
-                        'bank_account_name' => $payment->account_name,
-                        'payment_status' => 'pending',
-                        'status' => 'pending',
-                        'note' => $request->note
+                        'bank_account_name'   => $payment->account_name,
+                        'payment_status'      => 'pending',
+                        'status'              => 'pending',
+                        'note'                => $request->note,
                     ]);
 
                     foreach ($cart->items as $item) {
@@ -313,29 +311,25 @@ class CheckoutController extends Controller
                             throw new \Exception('invalid');
                         }
 
-                        $subtotal = $variant->price * $item->qty;
+                        $subtotal    = $variant->price * $item->qty;
                         $totalPrice += $subtotal;
 
                         OrderItemModel::create([
-                            'order_id' => $order->id,
+                            'order_id'           => $order->id,
                             'product_variant_id' => $variant->id,
-                            'quantity' => $item->qty,
-                            'price' => $variant->price,
-                            'subtotal' => $subtotal,
-                            'product_name' => $variant->product->name,
-                            'variant_sku' => $variant->sku,
-                            'variant_color' => $variant->color,
-                            'variant_size' => $variant->size,
+                            'quantity'           => $item->qty,
+                            'price'              => $variant->price,
+                            'subtotal'           => $subtotal,
+                            'product_name'       => $variant->product->name,
+                            'variant_sku'        => $variant->sku,
+                            'variant_attributes' => $variant->attributes, // ✅
                         ]);
 
                         $variant->decrement('stock', $item->qty);
-
                         $item->delete();
                     }
 
-                    $order->update([
-                        'total_price' => $totalPrice
-                    ]);
+                    $order->update(['total_price' => $totalPrice]);
                 }
 
                 return $order;
@@ -347,8 +341,6 @@ class CheckoutController extends Controller
                 ->route('customer.orders')
                 ->with('success', 'Pesanan berhasil dibuat');
         } catch (\Throwable $e) {
-
-            // ✅ LOG INTERNAL (AMAN)
             Log::error($e);
 
             return back()->withErrors([
@@ -358,13 +350,12 @@ class CheckoutController extends Controller
     }
 
     /*
-    |--------------------------------------------------------------------------
-    | BUY NOW (langsung dari produk)
-    |--------------------------------------------------------------------------
-    */
+|--------------------------------------------------------------------------
+| BUY NOW
+|--------------------------------------------------------------------------
+*/
     public function buyNow(Request $request)
     {
-        // ✅ VALIDASI USER (jangan asumsi selalu login)
         $user = Auth::user();
         if (!$user) {
             abort(403);
@@ -372,10 +363,9 @@ class CheckoutController extends Controller
 
         $request->validate([
             'variant_id' => 'required|integer|exists:product_variants,id',
-            'qty' => 'required|integer|min:1|max:100'
+            'qty'        => 'required|integer|min:1|max:100'
         ]);
 
-        // ✅ AMBIL DATA + RELASI
         $variant = ProductVariantModel::with(['product', 'branch'])
             ->find($request->variant_id);
 
@@ -383,17 +373,14 @@ class CheckoutController extends Controller
             return back()->with('error', 'Variant tidak ditemukan');
         }
 
-        // ✅ VALIDASI PRODUK AKTIF
         if (!$variant->product || !$variant->product->is_active) {
             return back()->with('error', 'Produk tidak tersedia');
         }
 
-        // ✅ VALIDASI CABANG AKTIF (tambahan)
         if (!$variant->branch || !$variant->branch->is_active) {
             return back()->with('error', 'Cabang tidak tersedia');
         }
 
-        // ✅ VALIDASI STOCK
         if ($variant->stock <= 0) {
             return back()->with('error', 'Stok habis');
         }
@@ -402,21 +389,15 @@ class CheckoutController extends Controller
             return back()->with('error', 'Jumlah melebihi stok');
         }
 
-        // 🔒 RESET SESSION (anti tab lama / race)
         session()->forget('buy_now');
 
-        // ✅ SIMPAN SESSION DENGAN HARDENING
         session([
             'buy_now' => [
-                'variant_id' => $variant->id,
-                'qty' => (int) $request->qty,
-
-                // 🔥 optional tapi bagus (anti manipulasi ringan)
+                'variant_id'     => $variant->id,
+                'qty'            => (int) $request->qty,
                 'price_snapshot' => $variant->price,
-                'branch_id' => $variant->branch_id,
-
-                // 🔒 expiry
-                'expired_at' => now()->addMinutes(10)->timestamp
+                'branch_id'      => $variant->branch_id,
+                'expired_at'     => now()->addMinutes(10)->timestamp,
             ]
         ]);
 

@@ -12,75 +12,78 @@
 
                         @foreach ($cart->items as $item)
                             @php
-                                $subtotal = $item->variant->price * $item->qty;
+                                $product = $item->variant?->product ?? null;
+                                $imageUrl = asset('images/no-image.png');
+                                $subtotal = ($item->variant->price ?? 0) * $item->qty;
                                 $grandTotal += $subtotal;
+
+                                if ($product && $product->mainImage?->path) {
+                                    $imageUrl = asset('storage/' . ltrim($product->mainImage->path, '/'));
+                                }
                             @endphp
 
                             <div class="td-cart-card mb-3 p-4 rounded-4 shadow-sm">
-
                                 <div class="d-flex flex-column flex-lg-row align-items-start gap-4">
 
-                                    {{-- LEFT SECTION (IMAGE + INFO + QTY) --}}
+                                    {{-- LEFT SECTION --}}
                                     <div class="d-flex gap-3 flex-grow-1">
 
                                         {{-- IMAGE --}}
                                         <div class="td-cart-img">
-                                            @php
-                                                $product = $item->variant?->product ?? null;
-                                                $imageUrl = asset('images/no-image.png'); // default fallback
-
-                                                if ($product && $product->image) {
-                                                    $images = $product->image; // sekarang sudah array karena $casts
-
-                                                    if (is_array($images) && !empty($images[0])) {
-                                                        $firstImage = $images[0];
-
-                                                        // Tambah prefix 'storage/' kalau belum ada (aman kalau path di DB beda format)
-                                                        if (
-                                                            !Str::startsWith($firstImage, 'storage/') &&
-                                                            !Str::startsWith($firstImage, '/storage/')
-                                                        ) {
-                                                            $firstImage = 'storage/' . $firstImage;
-                                                        }
-
-                                                        $imageUrl = asset($firstImage);
-                                                    }
-                                                }
-                                            @endphp
-
                                             <img src="{{ $imageUrl }}" alt="{{ $product?->name ?? 'Produk' }}"
                                                 class="img-fluid rounded-3" loading="lazy"
                                                 onerror="this.src='{{ asset('images/no-image.png') }}'; this.onerror=null;">
                                         </div>
 
                                         {{-- INFO --}}
+                                        {{-- INFO --}}
                                         <div class="flex-grow-1">
 
+                                            {{-- UMKM & Branch --}}
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                @if ($product?->umkm)
+                                                    <span class="badge px-2 py-1"
+                                                        style="background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.7rem; border: 1px solid rgba(99,102,241,0.4);">
+                                                        <i class="fa-solid fa-store me-1"></i>{{ $product->umkm->name }}
+                                                    </span>
+                                                @endif
+
+                                                @if ($product?->umkm && $item->variant?->branch)
+                                                    <span style="color: #475569;">|</span>
+                                                @endif
+
+                                                @if ($item->variant?->branch)
+                                                    <span class="badge px-2 py-1"
+                                                        style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.7rem; border: 1px solid rgba(16,185,129,0.3);">
+                                                        <i
+                                                            class="fa-solid fa-location-dot me-1"></i>{{ $item->variant->branch->name }}
+                                                    </span>
+                                                @endif
+                                            </div>
+
                                             <h6 class="fw-semibold text-white mb-1">
-                                                {{ $item->variant->product->name }}
+                                                {{ $product?->name ?? '-' }}
                                             </h6>
 
+                                            {{-- ATTRIBUTES --}}
                                             <div class="text-secondary small mb-2">
-                                                {{ $item->variant->color }}
-                                                {{ $item->variant->size ? '• ' . $item->variant->size : '' }}
+                                                @if ($item->variant->attributes)
+                                                    {{ collect($item->variant->attributes)->map(fn($v, $k) => ucfirst($k) . ': ' . $v)->implode(' • ') }}
+                                                @endif
                                             </div>
 
                                             {{-- PRICE --}}
                                             <div class="text-white fw-medium mb-2">
-                                                Rp {{ number_format($item->variant->price, 0, ',', '.') }}
+                                                Rp {{ number_format($item->variant->price ?? 0, 0, ',', '.') }}
                                             </div>
 
                                             {{-- QTY --}}
                                             <div class="td-qty-control">
-
                                                 <button type="button" onclick="qtyMinus(this)">−</button>
-
                                                 <input type="number" value="{{ $item->qty }}" min="1"
                                                     max="{{ $item->variant->stock }}"
                                                     data-price="{{ $item->variant->price }}" class="cart-qty">
-
                                                 <button type="button" onclick="qtyPlus(this)">+</button>
-
                                             </div>
 
                                             <div class="td-stock small text-secondary mt-1">
@@ -88,28 +91,24 @@
                                             </div>
 
                                         </div>
-
                                     </div>
 
-                                    {{-- RIGHT SECTION (SUBTOTAL + DELETE) --}}
+                                    {{-- RIGHT SECTION --}}
                                     <div
                                         class="d-flex flex-row flex-sm-column align-items-center align-items-sm-end justify-content-between gap-3 mt-3 mt-sm-0">
 
-                                        <!-- Subtotal -->
                                         <div class="fw-bold fs-5 text-white cart-subtotal text-nowrap me-3 me-sm-0"
                                             data-subtotal="{{ $subtotal }}">
                                             Rp {{ number_format($subtotal, 0, ',', '.') }}
                                         </div>
 
-                                        <!-- Tombol Hapus (diperbesar & lebih mudah ditekan di mobile) -->
                                         <button type="button"
                                             class="td-delete btn-remove rounded-circle shadow-sm d-flex align-items-center justify-content-center"
-                                            data-id="{{ $item->id }}"
-                                            style="width: 42px; height: 42px; min-width: 42px;">
+                                            data-id="{{ $item->id }}" style="width:42px;height:42px;min-width:42px;">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
-                                    </div>
 
+                                    </div>
                                 </div>
                             </div>
                         @endforeach

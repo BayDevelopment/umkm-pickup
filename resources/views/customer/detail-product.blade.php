@@ -27,24 +27,24 @@
 
                         <div class="td-main-img">
                             <img id="mainProductImg"
-                                src="{{ $product->image && count($product->image)
-                                    ? asset('storage/' . $product->image[0])
-                                    : asset('images/no-image.png') }}"
+                                src="{{ $product->mainImage?->path ? asset('storage/' . $product->mainImage->path) : asset('images/no-image.png') }}"
                                 alt="{{ $product->name }}">
 
-                            @if ($product->created_at->diffInDays(now()) < 4)
+                            @if ($product->is_new)
                                 <span class="td-badge bg-success">Baru</span>
                             @endif
                         </div>
 
+                        {{-- Thumbnails --}}
                         <div class="td-thumbs mt-3">
-                            @foreach ($product->image ?? [] as $img)
+                            @foreach ($product->images as $img)
                                 <button type="button" class="td-thumb-btn"
-                                    onclick="setMainImg('{{ asset('storage/' . $img) }}')">
-                                    <img src="{{ asset('storage/' . $img) }}" alt="thumb">
+                                    onclick="setMainImg('{{ asset('storage/' . $img->path) }}')">
+                                    <img src="{{ asset('storage/' . $img->path) }}" alt="thumb">
                                 </button>
                             @endforeach
                         </div>
+
                     </div>
                 </div>
 
@@ -52,37 +52,42 @@
                 <div class="col-lg-6">
                     <div class="td-detail-card">
 
-                        <div id="productDetailContent" class="d-none">
-
-                            <h1 class="td-detail-title">{{ $product->name }}</h1>
-
-                            <div class="mb-3">
-                                <span class="td-stock {{ $product->is_in_stock ? '' : 'is-out' }}">
-                                    {{ $product->is_in_stock ? 'Stok tersedia: ' . $product->total_stock : 'Stok habis' }}
+                        {{-- UMKM & Branch --}}
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            @if ($product->umkm)
+                                <span class="badge px-2 py-1"
+                                    style="background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.75rem; border: 1px solid rgba(99,102,241,0.4);">
+                                    <i class="fa-solid fa-store me-1"></i>{{ $product->umkm->name }}
                                 </span>
-                            </div>
+                            @endif
 
-                            {{-- Harga --}}
-                            <div class="td-detail-price mb-4">
-                                <div class="td-price-now" id="productPrice">
-                                    Rp {{ number_format($product->lowest_price ?? 0, 0, ',', '.') }}
-                                </div>
-                            </div>
+                            @if ($product->umkm && $product->variants->first()?->branch)
+                                <span style="color: #475569;">|</span>
+                            @endif
 
+                            @if ($product->variants->first()?->branch)
+                                <span id="branchBadge" class="badge px-2 py-1"
+                                    style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.75rem; border: 1px solid rgba(16,185,129,0.3);">
+                                    <i class="fa-solid fa-location-dot me-1"></i>
+                                    <span id="branchBadgeText">{{ $product->variants->first()->branch->name }}</span>
+                                </span>
+                            @endif
                         </div>
 
-                        {{-- Branch Availability --}}
-                        @if ($product->variants->count())
-                            <div class="mb-4">
-                                <div class="td-variant-label mb-2">Tersedia di Cabang</div>
+                        <h1 class="td-detail-title">{{ $product->name }}</h1>
 
-                                <div class="td-branch-list">
-                                    <div id="selectedBranch" class="td-branch-item">
-                                        📍 Pilih variant
-                                    </div>
-                                </div>
+                        <div class="mb-3">
+                            <span class="td-stock {{ $product->is_in_stock ? '' : 'is-out' }}">
+                                {{ $product->is_in_stock ? 'Stok tersedia: ' . $product->total_stock : 'Stok habis' }}
+                            </span>
+                        </div>
+
+                        {{-- Harga --}}
+                        <div class="td-detail-price mb-4">
+                            <div class="td-price-now" id="productPrice">
+                                Rp {{ number_format($product->variants_min_price ?? 0, 0, ',', '.') }}
                             </div>
-                        @endif
+                        </div>
 
                         {{-- Variants --}}
                         @if ($product->variants->count())
@@ -94,11 +99,10 @@
                                         <label class="td-pill">
                                             <input type="radio" name="variant_id" value="{{ $variant->id }}"
                                                 data-stock="{{ $variant->stock }}" data-price="{{ $variant->price }}"
-                                                data-branch="{{ $variant->branch->name ?? '-' }}">
+                                                data-branch="{{ $variant->branch->name ?? '-' }}"> {{-- ✅ sudah ada --}}
 
                                             <span>
-                                                {{ $variant->color }}
-                                                {{ $variant->size ? '- ' . $variant->size : '' }}
+                                                {{ collect($variant->attributes)->map(fn($v, $k) => $v)->implode(' - ') }}
                                                 @if ($variant->stock == 0)
                                                     - <span style="color:red;">Stok Habis</span>
                                                 @endif
@@ -106,9 +110,9 @@
                                         </label>
                                     @endforeach
                                 </div>
+
                             </div>
                         @endif
-
 
                         {{-- Quantity --}}
                         <div class="mb-4">
@@ -125,11 +129,9 @@
                             </div>
                         </div>
 
-
                         {{-- Actions --}}
                         <form id="productActionForm" method="POST" class="w-100">
                             @csrf
-
                             <input type="hidden" name="variant_id" id="formVariantId">
                             <input type="hidden" name="qty" id="formQty">
 
@@ -145,7 +147,6 @@
                                 </button>
                             </div>
                         </form>
-
 
                         <hr style="border-color: rgba(255,255,255,.12)" class="my-4">
 
@@ -205,12 +206,9 @@
             const stockInfo = document.getElementById('stockInfo');
             const form = document.getElementById('productActionForm');
             const buttons = form ? form.querySelectorAll('button') : [];
-
             const detail = document.getElementById("productDetailContent");
             const priceEl = document.getElementById("productPrice");
-
-            // 🔥 NEW
-            const branchDisplay = document.getElementById('selectedBranch');
+            const branchBadgeText = document.getElementById('branchBadgeText'); // ✅
 
             // =========================
             // INIT
@@ -229,23 +227,20 @@
             }
 
             // =========================
-            // VARIANT CHANGE (UPDATED)
+            // VARIANT CHANGE
             // =========================
             radios.forEach(radio => {
                 radio.addEventListener('change', function() {
 
                     const stock = parseInt(this.dataset.stock || 0);
                     const price = parseInt(this.dataset.price || 0);
-
-                    // 🔥 FIX BRANCH (SIMPLE & CLEAN)
-                    const branchDisplay = document.getElementById('selectedBranch');
                     const branchName = this.dataset.branch || '-';
 
-                    if (branchDisplay) {
-                        branchDisplay.innerHTML = "📍 " + branchName;
+                    // ✅ Update branch badge di atas
+                    if (branchBadgeText) {
+                        branchBadgeText.textContent = branchName;
                     }
 
-                    // existing logic tetap
                     showDetail();
 
                     if (qtyInput) {
@@ -275,14 +270,11 @@
             window.setMainImg = function(src) {
                 const mainImg = document.getElementById('mainProductImg');
                 if (!mainImg) return;
-
                 mainImg.style.opacity = 0;
-
                 setTimeout(() => {
                     mainImg.src = src;
                     mainImg.style.opacity = 1;
                 }, 150);
-
                 showDetail();
             }
 
@@ -302,7 +294,6 @@
             }
 
             window.validateProductSelection = function() {
-
                 const selected = getSelectedVariant();
 
                 if (!selected) {
@@ -329,27 +320,19 @@
             }
 
             window.submitCart = function() {
-
                 if (!validateProductSelection()) return;
-
                 const selected = getSelectedVariant();
-
                 document.getElementById('formVariantId').value = selected.value;
                 document.getElementById('formQty').value = qtyInput.value;
-
                 form.action = "{{ route('customer.cart.add') }}";
                 form.submit();
             }
 
             window.submitBuyNow = function() {
-
                 if (!validateProductSelection()) return;
-
                 const selected = getSelectedVariant();
-
                 document.getElementById('formVariantId').value = selected.value;
                 document.getElementById('formQty').value = qtyInput.value;
-
                 form.action = "{{ route('customer.buy.now') }}";
                 form.submit();
             };

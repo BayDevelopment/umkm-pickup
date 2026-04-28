@@ -1,137 +1,55 @@
 <?php
 
-namespace App\Filament\Resources\Orders\Schemas;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Schema;
-
-class OrderForm
+return new class extends Migration
 {
-    public static function configure(Schema $schema): Schema
+    public function up(): void
     {
-        return $schema
-            ->columns(1)
-            ->components([
+        Schema::create('orders', function (Blueprint $table) {
+            $table->id();
 
-                Section::make('Informasi Order')
-                    ->schema([
+            $table->string('order_code')->unique();
 
-                        TextInput::make('order_code')
-                            ->label('Kode Order')
-                            ->disabled() // biasanya auto generate
-                            ->dehydrated(),
+            $table->foreignId('user_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
 
-                        Select::make('user_id')
-                            ->label('Customer')
-                            ->relationship('user', 'name')
-                            ->searchable()
-                            ->required(),
+            $table->foreignId('branch_id')
+                ->nullable()
+                ->constrained('branches')
+                ->nullOnDelete();
 
-                        Select::make('branch_id')
-                            ->label('Cabang')
-                            ->relationship('branch', 'name')
-                            ->searchable(),
+            $table->foreignId('payment_method_id')
+                ->nullable()
+                ->constrained('payment_methods')
+                ->nullOnDelete();
 
-                        Select::make('payment_method_id')
-                            ->label('Metode Pembayaran')
-                            ->relationship(
-                                'paymentMethod',
-                                'name',
-                                fn($query) => $query->where('is_active', true)
-                            )
-                            ->searchable(),
+            // Snapshot pembayaran
+            $table->string('bank_name')->nullable();
+            $table->string('bank_account_number')->nullable();
+            $table->string('bank_account_name')->nullable();
+            $table->string('payment_proof')->nullable(); // bukti transfer
 
-                        Grid::make(2)
-                            ->schema([
+            // Status
+            $table->enum('status', ['pending', 'process', 'done', 'cancel'])->default('pending');
+            $table->enum('payment_status', ['pending', 'paid', 'rejected'])->default('pending');
 
-                                Select::make('status')
-                                    ->options([
-                                        'pending' => 'Pending',
-                                        'process' => 'Process',
-                                        'done'    => 'Done',
-                                        'cancel'  => 'Cancel',
-                                    ])
-                                    ->required(),
+            $table->unsignedBigInteger('total_price')->default(0);
 
-                                Select::make('payment_status')
-                                    ->options([
-                                        'pending'  => 'Pending',
-                                        'paid'     => 'Paid',
-                                        'rejected' => 'Rejected',
-                                    ])
-                                    ->required(),
+            $table->boolean('stock_restored')->default(false); // untuk rollback stok jika cancel
 
-                            ]),
+            $table->string('note')->nullable();
 
-                    ])
-                    ->columnSpanFull(),
-
-                Section::make('Snapshot Pembayaran')
-                    ->schema([
-
-                        TextInput::make('bank_name')
-                            ->label('Nama Bank')
-                            ->maxLength(255),
-
-                        TextInput::make('bank_account_number')
-                            ->label('Nomor Rekening')
-                            ->numeric(),
-
-                        TextInput::make('bank_account_name')
-                            ->label('Atas Nama'),
-
-                    ])
-                    ->columnSpanFull(),
-
-                Section::make('Items Pesanan')
-                    ->schema([
-
-                        Repeater::make('items')
-                            ->relationship()
-                            ->schema([
-
-                                Select::make('product_variant_id')
-                                    ->label('Product Variant')
-                                    ->relationship('variant', 'sku')
-                                    ->searchable()
-                                    ->required(),
-
-                                TextInput::make('quantity')
-                                    ->numeric()
-                                    ->minValue(1)
-                                    ->required(),
-
-                                TextInput::make('price')
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->required(),
-
-                                TextInput::make('subtotal')
-                                    ->numeric()
-                                    ->disabled(),
-
-                            ])
-                            ->columns(4)
-                            ->createItemButtonLabel('Tambah Item'),
-
-                    ])
-                    ->columnSpanFull(),
-
-                Section::make('Total')
-                    ->schema([
-
-                        TextInput::make('total_price')
-                            ->numeric()
-                            ->minValue(0)
-                            ->disabled(),
-
-                    ])
-                    ->columnSpanFull(),
-
-            ]);
+            $table->softDeletes();
+            $table->timestamps();
+        });
     }
-}
+
+    public function down(): void
+    {
+        Schema::dropIfExists('orders');
+    }
+};

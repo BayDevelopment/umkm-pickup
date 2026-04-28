@@ -79,21 +79,28 @@
         <div class="row g-4 product-grid">
             @forelse ($products as $product)
                 @php
-                    $firstVariant = $product->variants->first();
-                    $lowestPrice = $product->variants->min('price') ?? 0;
+                    $lowestPrice = $product->lowest_price ?? 0;
                     $hasStock = $product->variants->sum('stock') > 0;
                     $description = Str::limit($product->description ?? 'Tidak ada deskripsi', 80, '...');
+                    $imgPath = $product->mainImage ? asset('storage/' . $product->mainImage->path) : null;
+
+                    // Ambil branch unik dari semua variant
+                    $branches = $product->variants
+                        ->whereNotNull('branch_id')
+                        ->map(fn($v) => $v->branch?->name)
+                        ->filter()
+                        ->unique()
+                        ->values();
                 @endphp
 
                 <div class="col-xl-4 col-lg-4 col-md-6">
-                    <!-- Card dengan tinggi fixed & deskripsi ellipsis -->
                     <div class="td-product-card h-100 shadow-lg overflow-hidden position-relative d-flex flex-column">
 
                         <!-- Image -->
                         <div class="product-img-wrapper position-relative" style="height: 280px;">
-                            @if ($product->image && is_array($product->image) && count($product->image))
-                                <img loading="lazy" src="{{ asset('storage/' . $product->image[0]) }}"
-                                    alt="{{ $product->name }}" class="td-product-img w-100 h-100 object-fit-cover">
+                            @if ($imgPath)
+                                <img loading="lazy" src="{{ $imgPath }}" alt="{{ $product->name }}"
+                                    class="td-product-img w-100 h-100 object-fit-cover">
                             @else
                                 <img loading="lazy"
                                     src="https://via.placeholder.com/480x480/1e1b4b/ffffff?text={{ Str::slug($product->name) }}"
@@ -105,23 +112,48 @@
                                 @if (!$hasStock)
                                     <span class="badge bg-danger px-3 py-2">Stok Habis</span>
                                 @endif
-                                @if ($product->created_at->diffInDays(now()) < 7)
+                                @if ($product->is_new)
                                     <span class="badge bg-success px-3 py-2">New Arrival</span>
                                 @endif
                             </div>
                         </div>
 
-                        <!-- Body (flex-grow-1 biar tinggi sama) -->
+                        <!-- Body -->
                         <div class="td-product-body p-4 d-flex flex-column flex-grow-1">
+
+                            {{-- UMKM Badge --}}
+                            @if ($product->umkm)
+                                <div class="mb-2">
+                                    <span class="badge px-2 py-1"
+                                        style="background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.7rem; border: 1px solid rgba(99,102,241,0.4);">
+                                        <i class="fa-solid fa-store me-1"></i>{{ $product->umkm->name }}
+                                    </span>
+                                </div>
+                            @endif
+
+                            {{-- Nama Produk --}}
                             <h6 class="fw-bold text-white mb-2 text-truncate">
                                 {{ $product->name }}
                             </h6>
 
-                            <!-- Deskripsi pakai ellipsis (titik-titik) -->
+                            {{-- Deskripsi --}}
                             <p class="text-secondary small mb-3 flex-grow-1 text-truncate-3" style="line-height: 1.5;">
                                 {{ $description }}
                             </p>
 
+                            {{-- Branch --}}
+                            @if ($branches->isNotEmpty())
+                                <div class="mb-3 d-flex flex-wrap gap-1">
+                                    @foreach ($branches as $branch)
+                                        <span class="badge px-2 py-1"
+                                            style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.65rem; border: 1px solid rgba(16,185,129,0.3);">
+                                            <i class="fa-solid fa-location-dot me-1"></i>{{ $branch }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            {{-- Harga & Tombol --}}
                             <div class="mt-auto d-flex justify-content-between align-items-center">
                                 <div>
                                     <div class="text-muted small">Mulai dari</div>

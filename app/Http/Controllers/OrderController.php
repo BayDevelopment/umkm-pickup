@@ -19,7 +19,11 @@ class OrderController extends Controller
     {
         $allowedStatuses = ['pending', 'process', 'done', 'cancel'];
 
-        $query = OrderModel::with(['paymentMethod', 'branch'])
+        $query = OrderModel::with([
+            'paymentMethod',
+            'branch',
+            'items.variant.product.umkm', // ✅ ambil umkm via product
+        ])
             ->where('user_id', Auth::id());
 
         // Filter status hanya jika valid
@@ -62,7 +66,9 @@ class OrderController extends Controller
         $this->authorizeOrder($order);
 
         $order->load([
-            'items.variant.product',
+            'items.variant.product.umkm', // ✅
+            'items.variant.product.mainImage', // ✅
+            'items.variant.branch', // ✅
             'paymentMethod',
             'branch',
         ]);

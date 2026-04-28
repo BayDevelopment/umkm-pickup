@@ -1,8 +1,25 @@
 <nav class="navbar navbar-expand-lg fixed-top td-navbar">
     <div class="container">
-        <a class="navbar-brand td-brand" href="#">
-            Trendora
+        <a class="navbar-brand td-brand" href="{{ url('/') }}">
+            <span class="trendora">Trendora</span><span class="pick">Pick</span>
         </a>
+        <style>
+            .td-brand {
+                font-family: 'Poppins', sans-serif;
+                font-size: 24px;
+            }
+
+            .trendora {
+                font-style: italic;
+                font-weight: 300;
+                /* semi bold */
+            }
+
+            .pick {
+                font-weight: 600;
+                font-style: italic;
+            }
+        </style>
 
         <button class="navbar-toggler td-toggler" type="button" data-bs-toggle="collapse"
             data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"

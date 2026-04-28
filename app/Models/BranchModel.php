@@ -35,6 +35,11 @@ class BranchModel extends Model
         'longitude'     => 'float',
     ];
 
+    public function umkm()
+    {
+        return $this->belongsTo(umkmModel::class, 'umkm_id');
+    }
+
     // Relasi ke orders (satu cabang bisa punya banyak order)
     public function orders()
     {

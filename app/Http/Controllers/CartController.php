@@ -30,7 +30,11 @@ class CartController extends Controller
     */
     public function index()
     {
-        $cart = $this->getCart()->load(['items.variant.product']);
+        $cart = $this->getCart()->load([
+            'items.variant.product.mainImage',
+            'items.variant.product.umkm',  // ✅
+            'items.variant.branch',         // ✅
+        ]);
 
         $viewPrefix = 'pages';
 
@@ -49,7 +53,11 @@ class CartController extends Controller
     {
         session()->forget('buy_now');
 
-        $cart = $this->getCart()->load(['items.variant.product']);
+        $cart = $this->getCart()->load([
+            'items.variant.product.mainImage',
+            'items.variant.product.umkm',  // ✅
+            'items.variant.branch',         // ✅
+        ]);
 
         return view('customer.cart', [
             'title'   => 'Keranjang | Trendora',
@@ -65,7 +73,6 @@ class CartController extends Controller
     */
     private function handleAddToCart($variantId, $qty)
     {
-        // 🔒 ambil dari DB (source of truth)
         $variant = ProductVariantModel::with(['product', 'branch'])
             ->find($variantId);
 
@@ -73,17 +80,14 @@ class CartController extends Controller
             return ['error' => 'Variant tidak valid.'];
         }
 
-        // 🔒 validasi produk
         if (!$variant->product || !$variant->product->is_active) {
             return ['error' => 'Produk tidak tersedia.'];
         }
 
-        // 🔒 validasi cabang
         if (!$variant->branch || !$variant->branch->is_active) {
             return ['error' => 'Cabang tidak tersedia.'];
         }
 
-        // 🔒 validasi stock
         if ($variant->stock <= 0) {
             return ['error' => 'Stok habis.'];
         }
@@ -99,28 +103,25 @@ class CartController extends Controller
             ->first();
 
         if ($item) {
-
             $newQty = $item->qty + $qty;
 
             if ($newQty > $variant->stock) {
                 return ['error' => 'Jumlah melebihi stok tersedia.'];
             }
 
-            $item->update([
-                'qty' => $newQty
-            ]);
+            $item->update(['qty' => $newQty]);
         } else {
 
             CartItemModel::create([
                 'cart_id'    => $cart->id,
                 'variant_id' => $variant->id,
                 'qty'        => $qty,
+                'price'      => $variant->price, // ✅ snapshot harga saat ini
             ]);
         }
 
         return ['success' => true];
     }
-
     /*
     |------------------------------------------------------------------
     | ADD TO CART

@@ -17,7 +17,12 @@ class OrderSuccessMail extends Mailable
 
     public function __construct($order)
     {
-        $this->order = $order->load('items');
+        $this->order = $order->load([
+            'items.variant.product.umkm',
+            'items.variant.branch',
+            'branch',
+            'paymentMethod',
+        ]);
     }
 
     // /**

@@ -12,8 +12,9 @@ class OrderModel extends Model
 {
     use HasFactory, SoftDeletes;
     protected $table = 'orders';
+
     protected $fillable = [
-        'order_code',            // 🔥 wajib
+        'order_code',
         'user_id',
         'branch_id',
         'payment_method_id',
@@ -24,11 +25,14 @@ class OrderModel extends Model
         'payment_proof',
         'payment_status',
         'status',
-        'stock_restored',        // 🔥 penting untuk logic
+        'stock_restored',
+        'note', // ✅ tambah ini, ada di migration tapi belum di fillable
     ];
+
 
     protected $casts = [
         'total_price' => 'integer',
+        'stock_restored' => 'boolean', // ✅
     ];
 
     public function user()

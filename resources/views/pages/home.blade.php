@@ -15,16 +15,16 @@
                     </div>
 
                     <h1 class="display-5 fw-bold lh-1">
-                        Temukan gaya terbaikmu di
+                        Belanja UMKM Lokal,
                         <span
                             style="background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;background-clip:text;color:transparent;">
-                            Trendora
+                            Ambil di Tempat
                         </span>
                     </h1>
 
                     <p class="lead td-subtitle mt-3">
-                        Platform katalog fashion & lifestyle yang rapi, elegan, dan siap scale —
-                        dari UMKM sampai brand besar.
+                        TrendoraPick adalah platform katalog fashion & lifestyle berbasis UMKM pickup yang rapi, elegan, dan
+                        siap berkembang — dari pelaku usaha kecil hingga brand besar.
                     </p>
 
                     <div class="d-flex flex-column flex-sm-row gap-3 mt-4">
@@ -216,38 +216,62 @@
 
 
             <!-- PRODUCT LIST -->
-            <!-- PRODUCT LIST -->
             <div class="row g-4">
-
                 @forelse ($products as $product)
                     @php
                         $lowestPrice = $product->variants->min('price');
                         $hasVariant = $product->variants->isNotEmpty();
+                        $hasStock = $product->variants->sum('stock') > 0;
                         $productUrl = url('produk/' . $product->category->slug . '/' . $product->slug);
+                        $branches = $product->variants
+                            ->whereNotNull('branch_id')
+                            ->map(fn($v) => $v->branch?->name)
+                            ->filter()
+                            ->unique()
+                            ->values();
                     @endphp
 
                     <div class="col-12 col-sm-6 col-lg-4">
-
                         <div class="td-product-card h-100">
 
                             <!-- IMAGE -->
                             <a href="{{ $productUrl }}" class="td-product-thumb">
-
-                                @if ($product->image && count($product->image) > 0)
-                                    <img src="{{ asset('storage/' . $product->image[0]) }}" alt="{{ $product->name }}">
+                                @if ($product->mainImage?->path)
+                                    <img src="{{ asset('storage/' . $product->mainImage->path) }}">
                                 @else
-                                    <img src="{{ asset('images/no-image.png') }}" alt="{{ $product->name }}">
+                                    <img src="{{ asset('images/no-image.png') }}">
                                 @endif
 
-                                <span class="td-badge {{ $product->is_new ? 'bg-success' : 'bg-secondary' }}">
-                                    {{ $product->is_new ? 'Baru' : 'Lama' }}
-                                </span>
-
+                                @if (!$hasStock)
+                                    <span class="td-badge bg-danger">Stok Habis</span>
+                                @elseif ($product->is_new)
+                                    <span class="td-badge bg-success">Baru</span>
+                                @endif
                             </a>
-
 
                             <!-- BODY -->
                             <div class="td-product-body">
+
+                                {{-- UMKM & Branch --}}
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    {{-- UMKM (kiri) --}}
+                                    @if ($product->umkm)
+                                        <span class="badge px-2 py-1"
+                                            style="background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.7rem; border: 1px solid rgba(99,102,241,0.4);">
+                                            <i class="fa-solid fa-store me-1"></i>{{ $product->umkm->name }}
+                                        </span>
+                                    @else
+                                        <span></span>
+                                    @endif
+
+                                    {{-- Branch (kanan) --}}
+                                    @if ($branches->isNotEmpty())
+                                        <span class="badge px-2 py-1"
+                                            style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.65rem; border: 1px solid rgba(16,185,129,0.3);">
+                                            <i class="fa-solid fa-location-dot me-1"></i>{{ $branches->first() }}
+                                        </span>
+                                    @endif
+                                </div>
 
                                 <a href="{{ $productUrl }}" class="td-product-title">
                                     {{ $product->name }}
@@ -261,10 +285,8 @@
                                     </div>
                                 </div>
 
-
                                 <!-- BUTTON -->
                                 <div class="d-flex gap-2 mt-3">
-
                                     @if ($hasVariant)
                                         <a href="{{ $productUrl }}" class="btn btn-td w-100 td-btn-action">
                                             <i class="fa-solid fa-eye"></i>
@@ -276,39 +298,25 @@
                                             <span>Tidak Tersedia</span>
                                         </button>
                                     @endif
-
                                 </div>
 
                             </div>
-
                         </div>
-
                     </div>
 
                 @empty
-
-                    <!-- EMPTY STATE -->
                     <div class="col-12">
-
                         <div class="td-card p-5 text-center">
-
-                            <div class="mb-3" style="font-size:48px;">
-                                📦
-                            </div>
-
+                            <div class="mb-3" style="font-size:48px;">📦</div>
                             <h5 class="fw-semibold text-white mb-2">
                                 Tidak ada produk yang ditampilkan
                             </h5>
-
                             <div class="td-subtitle">
                                 Produk belum tersedia atau sedang dinonaktifkan.
                             </div>
-
                         </div>
-
                     </div>
                 @endforelse
-
             </div>
 
 

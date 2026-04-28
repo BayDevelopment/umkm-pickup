@@ -9,6 +9,7 @@ class OrderItemModel extends Model
 {
     use HasFactory;
     protected $table = 'order_items';
+
     protected $fillable = [
         'order_id',
         'product_variant_id',
@@ -17,15 +18,17 @@ class OrderItemModel extends Model
         'subtotal',
         'product_name',
         'variant_sku',
-        'variant_color',
-        'variant_size',
+        'variant_attributes', // ✅ ganti color/size → JSON
         'note',
     ];
+
 
     protected $casts = [
         'price' => 'integer',
         'subtotal' => 'integer',
         'quantity' => 'integer',
+        'variant_attributes' => 'array', // ✅
+
     ];
 
     /*

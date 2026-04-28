@@ -7,13 +7,9 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 class="checkout-title">Checkout</h3>
                 @if (isset($isBuyNow) && $isBuyNow)
-                    <a href="{{ url()->previous() }}" class="btn btn-back">
-                        ← Kembali ke Produk
-                    </a>
+                    <a href="{{ url()->previous() }}" class="btn btn-back">← Kembali ke Produk</a>
                 @else
-                    <a href="{{ route('customer.cart.index') }}" class="btn btn-back">
-                        ← Kembali ke Keranjang
-                    </a>
+                    <a href="{{ route('customer.cart.index') }}" class="btn btn-back">← Kembali ke Keranjang</a>
                 @endif
             </div>
 
@@ -28,9 +24,7 @@
             @endif
 
             @if (session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
+                <div class="alert alert-success">{{ session('success') }}</div>
             @endif
 
             <div class="row g-4">
@@ -45,8 +39,9 @@
                             @php
                                 $variant = $buyNowItem->variant;
                                 $product = $variant?->product;
-                                $img = is_array($product?->image) && count($product->image) ? $product->image[0] : null;
-
+                                $imgPath = $product?->mainImage?->path
+                                    ? asset('storage/' . $product->mainImage->path)
+                                    : asset('images/no-image.png');
                                 $price = (int) ($variant?->price ?? 0);
                                 $qty = (int) ($buyNowItem->qty ?? 0);
                                 $subtotal = $price * $qty;
@@ -55,18 +50,41 @@
                             <div class="checkout-item">
 
                                 <div class="item-img">
-                                    <img src="{{ $img ? asset('storage/' . $img) : asset('images/no-image.png') }}">
+                                    <img src="{{ $imgPath }}" alt="{{ $product?->name }}"
+                                        onerror="this.src='{{ asset('images/no-image.png') }}'; this.onerror=null;">
                                 </div>
 
                                 <div class="item-info">
-                                    <div class="item-name">
-                                        {{ $product?->name ?? '-' }}
+
+                                    {{-- UMKM & Branch --}}
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        @if ($product?->umkm)
+                                            <span class="badge px-2 py-1"
+                                                style="background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.65rem; border: 1px solid rgba(99,102,241,0.4);">
+                                                <i class="fa-solid fa-store me-1"></i>{{ $product->umkm->name }}
+                                            </span>
+                                        @endif
+
+                                        @if ($product?->umkm && $variant?->branch)
+                                            <span style="color: #475569;">|</span>
+                                        @endif
+
+                                        @if ($variant?->branch)
+                                            <span class="badge px-2 py-1"
+                                                style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.65rem; border: 1px solid rgba(16,185,129,0.3);">
+                                                <i class="fa-solid fa-location-dot me-1"></i>{{ $variant->branch->name }}
+                                            </span>
+                                        @endif
                                     </div>
 
-                                    <div class="item-variant">
-                                        {{ $variant?->color ?? '-' }}
-                                        {{ $variant?->size ? ' • ' . $variant->size : '' }}
-                                    </div>
+                                    <div class="item-name">{{ $product?->name ?? '-' }}</div>
+
+                                    {{-- Attributes --}}
+                                    @if ($variant?->attributes)
+                                        <div class="text-secondary small mb-1">
+                                            {{ collect($variant->attributes)->map(fn($v, $k) => ucfirst($k) . ': ' . $v)->implode(' • ') }}
+                                        </div>
+                                    @endif
 
                                     <div class="item-price">
                                         Rp {{ number_format($price, 0, ',', '.') }} × {{ $qty }}
@@ -83,11 +101,9 @@
                                 @php
                                     $variant = $item->variant;
                                     $product = $variant?->product;
-                                    $img =
-                                        is_array($product?->image) && count($product->image)
-                                            ? $product->image[0]
-                                            : null;
-
+                                    $imgPath = $product?->mainImage?->path
+                                        ? asset('storage/' . $product->mainImage->path)
+                                        : asset('images/no-image.png');
                                     $price = (int) ($variant?->price ?? 0);
                                     $qty = (int) ($item->qty ?? 0);
                                     $subtotal = $price * $qty;
@@ -96,25 +112,42 @@
                                 <div class="checkout-item">
 
                                     <div class="item-img">
-                                        <img src="{{ $img ? asset('storage/' . $img) : asset('images/no-image.png') }}">
+                                        <img src="{{ $imgPath }}" alt="{{ $product?->name }}"
+                                            onerror="this.src='{{ asset('images/no-image.png') }}'; this.onerror=null;">
                                     </div>
 
                                     <div class="item-info">
-                                        <div class="item-name">
-                                            {{ $product?->name ?? '-' }}
+
+                                        {{-- UMKM & Branch --}}
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            @if ($product?->umkm)
+                                                <span class="badge px-2 py-1"
+                                                    style="background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.65rem; border: 1px solid rgba(99,102,241,0.4);">
+                                                    <i class="fa-solid fa-store me-1"></i>{{ $product->umkm->name }}
+                                                </span>
+                                            @endif
+
+                                            @if ($product?->umkm && $variant?->branch)
+                                                <span style="color: #475569;">|</span>
+                                            @endif
+
+                                            @if ($variant?->branch)
+                                                <span class="badge px-2 py-1"
+                                                    style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.65rem; border: 1px solid rgba(16,185,129,0.3);">
+                                                    <i
+                                                        class="fa-solid fa-location-dot me-1"></i>{{ $variant->branch->name }}
+                                                </span>
+                                            @endif
                                         </div>
 
-                                        <div class="text-secondary small mb-2">
-                                            {{ $item->variant->color }}
-                                            {{ $item->variant->size ? '• ' . $item->variant->size : '' }}
-                                        </div>
+                                        <div class="item-name">{{ $product?->name ?? '-' }}</div>
 
-                                        {{-- BRANCH --}}
-                                        <div class="small mb-2">
-                                            <span class="badge bg-info text-dark">
-                                                {{ $item->variant->branch->name }}
-                                            </span>
-                                        </div>
+                                        {{-- Attributes --}}
+                                        @if ($variant?->attributes)
+                                            <div class="text-secondary small mb-1">
+                                                {{ collect($variant->attributes)->map(fn($v, $k) => ucfirst($k) . ': ' . $v)->implode(' • ') }}
+                                            </div>
+                                        @endif
 
                                         <div class="item-price">
                                             Rp {{ number_format($price, 0, ',', '.') }} × {{ $qty }}
@@ -137,10 +170,8 @@
                     </div>
                 </div>
 
-
                 {{-- ================= RIGHT ================= --}}
                 <div class="col-lg-4">
-
                     <form action="{{ route('customer.checkout.store') }}" method="POST">
                         @csrf
 
@@ -151,14 +182,13 @@
 
                         <div class="glass-card p-4">
 
-                            {{-- ===== PILIH CABANG ===== --}}
+                            {{-- PILIH CABANG --}}
                             <h5 class="section-title mb-3">Pilih Cabang</h5>
 
                             <input type="text" id="branchSearch" class="form-control checkout-textarea mb-3"
                                 placeholder="Cari cabang (nama atau alamat)...">
 
                             <div id="branchContainer" class="branch-scroll">
-
                                 @foreach ($branches as $branch)
                                     <label class="payment-option branch-item" data-name="{{ strtolower($branch->name) }}"
                                         data-address="{{ strtolower($branch->address) }}">
@@ -166,56 +196,38 @@
                                         <input type="radio" name="branch_id" value="{{ $branch->id }}" required>
 
                                         <div class="payment-content">
-
-                                            <div class="payment-title">
-                                                {{ $branch->name }}
-                                            </div>
-
+                                            <div class="payment-title">{{ $branch->name }}</div>
                                             <div class="payment-desc">
                                                 {{ $branch->address ?? 'Alamat tidak tersedia' }}
                                             </div>
-
                                         </div>
 
                                     </label>
                                 @endforeach
-
                             </div>
 
-
-                            {{-- ===== PILIH PEMBAYARAN ===== --}}
+                            {{-- PILIH PEMBAYARAN --}}
                             <h5 class="section-title mt-4 mb-3">Metode Pembayaran</h5>
 
                             @foreach ($paymentMethods as $pm)
                                 <label class="payment-option">
-
                                     <input type="radio" name="payment_method_id" value="{{ $pm->id }}" required>
-
                                     <div class="payment-content">
-                                        <div class="payment-title">
-                                            {{ $pm->name }}
-                                        </div>
+                                        <div class="payment-title">{{ $pm->name }}</div>
                                         <div class="payment-desc">
-                                            {{ $pm->bank_name }}
-                                            • {{ $pm->account_number }}
-                                            • a.n {{ $pm->account_name }}
+                                            {{ $pm->bank_name }} • {{ $pm->account_number }} • a.n
+                                            {{ $pm->account_name }}
                                         </div>
                                     </div>
-
                                 </label>
                             @endforeach
 
-
                             {{-- CATATAN --}}
                             <div class="mt-4">
-                                <label class="form-label text-secondary small">
-                                    Catatan (opsional)
-                                </label>
-
+                                <label class="form-label text-secondary small">Catatan (opsional)</label>
                                 <textarea name="note" rows="3" class="form-control checkout-textarea"
                                     placeholder="Contoh: warna sesuai foto ya...">{{ old('note') }}</textarea>
                             </div>
-
 
                             {{-- TOTAL --}}
                             <div class="checkout-summary mt-4">
@@ -223,11 +235,9 @@
                                 <strong>Rp {{ number_format($total, 0, ',', '.') }}</strong>
                             </div>
 
-
                             {{-- BUTTON --}}
                             <button type="submit" class="btn btn-modern w-100 mt-3">
-                                <i class="fa-solid fa-lock"></i>
-                                Buat Pesanan
+                                <i class="fa-solid fa-lock"></i> Buat Pesanan
                             </button>
 
                             <div class="small text-muted mt-2">
@@ -236,8 +246,8 @@
 
                         </div>
                     </form>
-
                 </div>
+
             </div>
         </div>
     </section>

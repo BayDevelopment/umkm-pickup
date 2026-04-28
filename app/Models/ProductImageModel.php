@@ -12,6 +12,7 @@ class ProductImageModel extends Model
         'product_id',
         'path',
         'is_main',
+        'sort_order'
     ];
 
     protected $casts = [

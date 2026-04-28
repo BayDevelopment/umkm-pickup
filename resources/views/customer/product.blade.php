@@ -58,43 +58,70 @@
 
         <!-- PRODUCT GRID -->
         <div class="row g-4">
-
             @forelse ($products as $product)
                 @php
-                    $firstVariant = $product->variants->first();
-                    $firstImage = is_array($product->image) && count($product->image) ? $product->image[0] : null;
-                    $lowestPrice = $product->variants_min_price ?? 0;
+                    $lowestPrice = $product->variants_min_price ?? ($product->variants->min('price') ?? 0);
+                    $hasVariant = $product->variants->isNotEmpty();
+                    $imgPath = $product->mainImage?->path
+                        ? asset('storage/' . $product->mainImage->path)
+                        : 'https://via.placeholder.com/400x300';
+                    $branches = $product->variants
+                        ->whereNotNull('branch_id')
+                        ->map(fn($v) => $v->branch?->name)
+                        ->filter()
+                        ->unique()
+                        ->values();
                 @endphp
 
-                <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="col-xl-3 col-lg-4 col-md-6 col-12">
                     <div class="product-card h-100">
 
                         <!-- IMAGE -->
                         <div class="product-image">
-                            <img src="{{ $firstImage ? asset('storage/' . $firstImage) : 'https://via.placeholder.com/400x300' }}"
-                                alt="{{ $product->name }}">
+                            <img src="{{ $imgPath }}" alt="{{ $product->name }}"
+                                onerror="this.src='https://via.placeholder.com/400x300'; this.onerror=null;">
                         </div>
 
                         <!-- BODY -->
                         <div class="product-body">
 
-                            <h6>{{ $product->name }}</h6>
+                            {{-- UMKM & Branch --}}
+                            <div class="d-flex align-items-center gap-1 mb-2" style="min-width:0;">
 
-                            <p>
+                                @if ($product->umkm)
+                                    <span class="badge text-truncate px-2 py-1"
+                                        style="background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.65rem; border: 1px solid rgba(99,102,241,0.4); max-width: 45%;">
+                                        <i class="fa-solid fa-store me-1"></i>
+                                        <span class="text-truncate">{{ $product->umkm->name }}</span>
+                                    </span>
+                                @endif
+
+                                @if ($product->umkm && $branches->isNotEmpty())
+                                    <span style="color: #475569; flex-shrink:0;">|</span>
+                                @endif
+
+                                @if ($branches->isNotEmpty())
+                                    <span class="badge text-truncate px-2 py-1"
+                                        style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.65rem; border: 1px solid rgba(16,185,129,0.3); max-width: 45%;">
+                                        <i class="fa-solid fa-location-dot me-1"></i>
+                                        <span class="text-truncate">{{ $branches->first() }}</span>
+                                    </span>
+                                @endif
+
+                            </div>
+
+                            <h6 class="text-truncate mb-1" title="{{ $product->name }}">
+                                {{ $product->name }}
+                            </h6>
+
+                            <p class="text-truncate mb-3" title="{{ $product->description }}">
                                 {{ \Illuminate\Support\Str::limit($product->description ?? '-', 60) }}
                             </p>
 
                             <div class="product-footer">
                                 <div class="price">
-                                    @php
-                                        $lowestPrice = $product->variants->min('price') ?? 0;
-                                    @endphp
                                     Rp {{ number_format($lowestPrice, 0, ',', '.') }}
                                 </div>
-
-                                @php
-                                    $hasVariant = $product->variants->isNotEmpty();
-                                @endphp
 
                                 <div class="action-buttons">
                                     @if ($hasVariant)
@@ -114,7 +141,6 @@
                             </div>
 
                         </div>
-
                     </div>
                 </div>
 
@@ -125,11 +151,10 @@
                     </div>
                 </div>
             @endforelse
-
         </div>
 
         <!-- PAGINATION -->
-        @if ($products->count())
+        @if ($products->hasPages())
             <div class="mt-5 d-flex justify-content-center">
                 {{ $products->links() }}
             </div>

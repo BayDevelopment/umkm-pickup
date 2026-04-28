@@ -21,9 +21,14 @@ class OrderStatusUpdatedMail extends Mailable
 
     public function __construct($order, $oldStatus, $newStatus, $oldPayment, $newPayment)
     {
-        $this->order = $order->load('items'); // biar aman
-        $this->oldStatus = $oldStatus;
-        $this->newStatus = $newStatus;
+        $this->order = $order->load([
+            'items.variant.product.umkm',
+            'items.variant.branch',
+            'branch',
+            'paymentMethod',
+        ]);
+        $this->oldStatus  = $oldStatus;
+        $this->newStatus  = $newStatus;
         $this->oldPayment = $oldPayment;
         $this->newPayment = $newPayment;
     }

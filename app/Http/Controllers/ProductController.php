@@ -11,8 +11,8 @@ class ProductController extends Controller
     {
         $query = ProductModel::query()
             ->where('is_active', true)
-            ->whereHas('variants') // hanya produk yg punya variant
-            ->with(['variants', 'category'])
+            ->whereHas('variants')
+            ->with(['variants.branch', 'category', 'mainImage', 'umkm']) // ✅ gabung disini
             ->withMin('variants as lowest_price', 'price');
 
         // 🔍 SEARCH
@@ -85,6 +85,8 @@ class ProductController extends Controller
 
             ->with([
                 'category',
+                'mainImage', // ✅
+                'umkm',      // ✅
                 'variants' => function ($q) {
                     $q->where('stock', '>', 0)
                         ->with('branch');
@@ -152,9 +154,12 @@ class ProductController extends Controller
 
             ->with([
                 'category',
+                'umkm', // ✅ tambah ini
+                'images', // ✅ untuk thumbnail
+                'mainImage', // ✅ untuk gambar utama
                 'variants' => function ($q) {
                     $q->where('stock', '>', 0)
-                        ->with('branch'); // 🔥 ini penting
+                        ->with('branch');
                 }
             ])
 

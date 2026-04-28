@@ -11,7 +11,7 @@ class HomeController extends Controller
     public function index()
     {
         $products = ProductModel::where('is_active', true)
-            ->with(['variants', 'category'])
+            ->with(['variants.branch', 'category', 'mainImage', 'umkm']) // ✅
             ->latest()
             ->take(3)
             ->get();
