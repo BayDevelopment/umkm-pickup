@@ -24,7 +24,7 @@ class ProductVariantModel extends Model
     protected $casts = [
         'attributes' => 'array',
     ];
-
+    protected $with = ['branch']; // 🔥 WAJIB TAMBAH INI
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
@@ -38,7 +38,7 @@ class ProductVariantModel extends Model
 
     public function branch()
     {
-        return $this->belongsTo(BranchModel::class);
+        return $this->belongsTo(BranchModel::class, 'branch_id'); // pastikan foreign key-nya benar
     }
 
     public function cartItems()

@@ -65,13 +65,12 @@
                                 <span style="color: #475569;">|</span>
                             @endif
 
-                            @if ($product->variants->first()?->branch)
-                                <span id="branchBadge" class="badge px-2 py-1"
-                                    style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.75rem; border: 1px solid rgba(16,185,129,0.3);">
-                                    <i class="fa-solid fa-location-dot me-1"></i>
-                                    <span id="branchBadgeText">{{ $product->variants->first()->branch->name }}</span>
-                                </span>
-                            @endif
+                            <span id="branchBadge" class="badge px-2 py-1 d-none"
+                                style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.75rem; border: 1px solid rgba(16,185,129,0.3);">
+
+                                <i class="fa-solid fa-location-dot me-1"></i>
+                                <span id="branchBadgeText"></span>
+                            </span>
                         </div>
 
                         <h1 class="td-detail-title">{{ $product->name }}</h1>
@@ -235,6 +234,17 @@
                     const stock = parseInt(this.dataset.stock || 0);
                     const price = parseInt(this.dataset.price || 0);
                     const branchName = this.dataset.branch || '-';
+
+                    const branchBadge = document.getElementById('branchBadge');
+
+                    if (branchBadge && branchBadgeText) {
+                        if (branchName && branchName !== '-') {
+                            branchBadgeText.textContent = branchName;
+                            branchBadge.classList.remove('d-none');
+                        } else {
+                            branchBadge.classList.add('d-none');
+                        }
+                    }
 
                     // ✅ Update branch badge di atas
                     if (branchBadgeText) {

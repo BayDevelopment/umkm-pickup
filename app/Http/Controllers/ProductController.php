@@ -143,35 +143,45 @@ class ProductController extends Controller
     {
         $product = ProductModel::query()
             ->where('is_active', true)
-
+            ->where('slug', $productSlug)
             ->whereHas('category', function ($q) use ($categorySlug) {
                 $q->where('slug', $categorySlug);
             })
-
             ->whereHas('variants', function ($q) {
                 $q->where('stock', '>', 0);
             })
-
             ->with([
                 'category',
-                'umkm', // ✅ tambah ini
-                'images', // ✅ untuk thumbnail
-                'mainImage', // ✅ untuk gambar utama
+                'umkm',
+                'images',
+                'mainImage',
                 'variants' => function ($q) {
                     $q->where('stock', '>', 0)
                         ->with('branch');
                 }
             ])
-
-            ->withMin(['variants' => function ($q) {
+            ->withMin(['variants as lowest_price' => function ($q) {
                 $q->where('stock', '>', 0);
             }], 'price')
-
-            ->where('slug', $productSlug)
             ->firstOrFail();
 
+        // 🔥 FILTER DATA VARIANT (INI KUNCI)
+        // 🔥 TRANSFORM JADI OBJECT (BIAR SESUAI BLADE & JS)
+        $product->variants->transform(function ($v) {
+            return (object)[
+                'id' => $v->id,
+                'price' => $v->price,
+                'stock' => $v->stock,
+                'attributes' => $v->attributes,
+                'image' => $v->image ?? null,
+                'branch' => (object)[
+                    'name' => $v->branch?->name
+                ],
+            ];
+        });
+
         return view('customer.detail-product', [
-            'title' => 'Detail | Fashion & Lifestyle',
+            'title'   => $product->name . ' | Detail Produk',
             'navlink' => 'Detail',
             'product' => $product,
         ]);

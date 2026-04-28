@@ -61,17 +61,13 @@
                                 </span>
                             @endif
 
-                            @if ($product->umkm && $product->variants->first()?->branch)
-                                <span style="color: #475569;">|</span>
-                            @endif
+                            <span style="color: #475569;">|</span>
 
-                            @if ($product->variants->first()?->branch)
-                                <span class="badge px-2 py-1"
-                                    style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.75rem; border: 1px solid rgba(16,185,129,0.3);">
-                                    <i class="fa-solid fa-location-dot me-1"></i>
-                                    {{ $product->variants->first()->branch->name }}
-                                </span>
-                            @endif
+                            <span id="branchName" class="badge px-2 py-1"
+                                style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.75rem; border: 1px solid rgba(16,185,129,0.3);">
+                                <i class="fa-solid fa-location-dot me-1"></i>
+                                -
+                            </span>
                         </div>
 
                         <h1 class="td-detail-title">{{ $product->name }}</h1>
@@ -190,8 +186,8 @@
         }
 
         /* =========================
-                                                                   VARIANT ATTRIBUTE (MATCH SYSTEM)
-                                                                   ========================= */
+                                                                                                                                   VARIANT ATTRIBUTE (MATCH SYSTEM)
+                                                                                                                                   ========================= */
 
         .td-pill-attr {
             display: inline-flex;
@@ -266,7 +262,7 @@
         document.addEventListener('DOMContentLoaded', function() {
 
             const isLoggedIn = @json(auth()->check());
-            const variants = @json($product->variants);
+            const variants = @json($product->variants); // ✅ Sekarang attributes sudah jadi object karena $casts
 
             const qtyInput = document.getElementById('qtyInput');
             const stockInfo = document.getElementById('stockInfo');
@@ -278,15 +274,8 @@
             let selectedAttrs = {};
             let activeVariant = null;
 
-            // INIT — semua disabled sampai user pilih sendiri
             if (qtyInput) qtyInput.disabled = true;
             buttons.forEach(btn => btn.disabled = true);
-
-            // hitung total group attr dari DOM
-            const totalGroups = new Set(
-                [...document.querySelectorAll('.td-pill-attr, .td-select-attr')]
-                .map(el => el.dataset.attr).filter(Boolean)
-            ).size;
 
             // ===============================
             // HELPERS
@@ -310,6 +299,16 @@
                 }, 100);
             }
 
+            function updateBranch(branch) {
+                const el = document.getElementById('branchName');
+                if (!el) return;
+                if (branch && branch.name) {
+                    el.innerHTML = `<i class="fa-solid fa-location-dot me-1"></i>${branch.name}`;
+                } else {
+                    el.innerHTML = `<i class="fa-solid fa-location-dot me-1"></i>-`;
+                }
+            }
+
             function updateStock(stock) {
                 const hasStock = stock > 0;
                 if (stockInfo) {
@@ -317,11 +316,12 @@
                         'Stok tersedia: ' + stock :
                         '<span style="color:red">Stok habis</span>';
                 }
-                if (stockInfoText) {
-                    stockInfoText.innerHTML = hasStock ? 'Stok tersedia' : 'Pilih variant terlebih dahulu';
-                }
                 const tdStock = document.querySelector('.td-stock');
-                if (tdStock) tdStock.innerText = hasStock ? 'Stok tersedia: ' + stock : 'Stok habis';
+                if (tdStock) {
+                    tdStock.innerText = hasStock ?
+                        'Stok tersedia: ' + stock :
+                        'Stok habis';
+                }
             }
 
             function updateQty(stock) {
@@ -344,33 +344,46 @@
                     updateStock(0);
                     updateQty(0);
                     toggleButtons(0);
+                    updateBranch(null);
                     return;
                 }
+
                 activeVariant = variant;
+
                 updatePrice(variant.price ?? 0);
                 updateStock(variant.stock ?? 0);
                 updateQty(variant.stock ?? 0);
                 toggleButtons(variant.stock ?? 0);
+
                 if (variant.image) updateImage(variant.image);
+                updateBranch(variant.branch); // ✅ Tampilkan cabang sesuai variant dipilih
             }
 
             // ===============================
             // FIND VARIANT
             // ===============================
             function findVariantByAttrs() {
-                // belum semua group dipilih — tunggu dulu
-                if (Object.keys(selectedAttrs).length < totalGroups) {
+                const selectedKeys = Object.keys(selectedAttrs);
+
+                // Belum semua atribut dipilih, jangan apply dulu
+                const totalGroups = new Set(
+                    [...document.querySelectorAll('.td-pill-attr, .td-select-attr')]
+                    .map(el => el.dataset.attr).filter(Boolean)
+                ).size;
+
+                if (selectedKeys.length < totalGroups) {
                     applyVariant(null);
                     return;
                 }
 
-                // exact match
                 const match = variants.find(v => {
-                    const attrs = v.attributes || {};
-                    return Object.keys(selectedAttrs).every(key => attrs[key] == selectedAttrs[key]);
+                    const attrs = v.attributes || {}; // ✅ Sudah jadi object karena $casts di model
+                    return selectedKeys.every(key =>
+                        String(attrs[key]).toLowerCase() === String(selectedAttrs[key]).toLowerCase()
+                    );
                 });
 
-                applyVariant(match ?? null);
+                applyVariant(match || null);
             }
 
             // ===============================
