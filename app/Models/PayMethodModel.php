@@ -13,10 +13,11 @@ class PayMethodModel extends Model
     protected $table = 'payment_methods';
 
     protected $fillable = [
-        'name',
-        'bank_name',
-        'account_number',
-        'account_name',
+        'umkm_id',        // 🔥 tambah ini
+        'name',           // "QRIS", "Transfer BCA", "Cash"
+        'bank_name',      // "BCA", "Mandiri", null kalau cash/qris
+        'account_number', // no rek / no HP qris
+        'account_name',   // nama pemilik
         'is_active',
     ];
 
@@ -24,6 +25,10 @@ class PayMethodModel extends Model
         'is_active' => 'boolean',
     ];
 
+    public function umkm()
+    {
+        return $this->belongsTo(umkmModel::class, 'umkm_id');
+    }
     public function orders()
     {
         return $this->hasMany(OrderModel::class);

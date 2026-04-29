@@ -2,10 +2,13 @@
 
 namespace App\Filament\Resources\PaymentMethods\Schemas;
 
+use App\Models\umkmModel;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 
 class PaymentMethodForm
 {
@@ -20,6 +23,39 @@ class PaymentMethodForm
                     ->columnSpanFull()
                     ->columns(1)
                     ->schema([
+
+                        Select::make('umkm_id')
+                            ->label('UMKM')
+                            ->options(function () {
+                                $user = Auth::user();
+
+                                if ($user->role === 'admin') {
+                                    return umkmModel::approved()
+                                        ->pluck('name', 'id');
+                                }
+
+                                return umkmModel::approved()
+                                    ->where('user_id', $user->id)
+                                    ->pluck('name', 'id');
+                            })
+                            ->default(
+                                fn() => Auth::user()->role === 'owner'
+                                    ? \App\Models\umkmModel::where('user_id', Auth::id())->value('id')
+                                    : null
+                            )
+                            ->disabled(fn() => Auth::user()->role === 'owner')
+                            ->dehydrated()
+                            ->required()
+                            ->searchable()
+                            ->prefixIcon('heroicon-o-building-storefront')
+                            ->helperText(
+                                fn() => Auth::user()->role === 'owner'
+                                    ? 'Payment method otomatis terhubung ke UMKM Anda.'
+                                    : null
+                            )
+                            ->validationMessages([
+                                'required' => 'UMKM wajib dipilih.',
+                            ]),
 
                         TextInput::make('name')
                             ->label('Nama Metode')

@@ -22,6 +22,64 @@ class CheckoutController extends Controller
     | HALAMAN CHECKOUT (dari keranjang atau Buy Now)
     |--------------------------------------------------------------------------
     */
+    public function buyNow(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            abort(403);
+        }
+
+        $request->validate([
+            'variant_id' => 'required|integer|exists:product_variants,id',
+            'qty'        => 'required|integer|min:1|max:100'
+        ]);
+
+        $variant = ProductVariantModel::with(['product', 'branch'])
+            ->find($request->variant_id);
+
+        if (!$variant) {
+            return back()->with('error', 'Variant tidak ditemukan');
+        }
+
+        if (!$variant->product || !$variant->product->is_active) {
+            return back()->with('error', 'Produk tidak tersedia');
+        }
+
+        if (!$variant->branch || !$variant->branch->is_active) {
+            return back()->with('error', 'Cabang tidak tersedia');
+        }
+
+        if ($variant->stock <= 0) {
+            return back()->with('error', 'Stok habis');
+        }
+
+        if ($request->qty > $variant->stock) {
+            return back()->with('error', 'Jumlah melebihi stok');
+        }
+
+        session()->forget('buy_now');
+
+        // ✅ Simpan umkm_id di session agar tidak perlu query ulang di checkout
+        session([
+            'buy_now' => [
+                'variant_id'     => $variant->id,
+                'qty'            => (int) $request->qty,
+                'price_snapshot' => $variant->price,
+                'branch_id'      => $variant->branch_id,
+                'umkm_id'        => $variant->product->umkm_id,
+                'expired_at'     => now()->addMinutes(10)->timestamp,
+            ]
+        ]);
+
+        return redirect()->route('customer.checkout');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | INDEX CHECKOUT (tampilkan halaman checkout)
+    |--------------------------------------------------------------------------
+    */
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -32,7 +90,7 @@ class CheckoutController extends Controller
 
         /*
         |------------------------------------------------------------------
-        | BUY NOW MODE (FIX: expired_at validation)
+        | BUY NOW MODE
         |------------------------------------------------------------------
         */
         if (session()->has('buy_now')) {
@@ -50,8 +108,8 @@ class CheckoutController extends Controller
             }
 
             $variant = ProductVariantModel::with([
-                'product.mainImage', // ✅
-                'product.umkm',      // ✅
+                'product.mainImage',
+                'product.umkm',
                 'branch'
             ])->find($data['variant_id']);
 
@@ -73,12 +131,18 @@ class CheckoutController extends Controller
                 ->where('id', $variant->branch_id)
                 ->get();
 
+            // ✅ Payment method dari session umkm_id (efisien, 1 query)
+            // ✅ Fallback jika session lama tidak punya umkm_id
+            $umkmId = $data['umkm_id'] ?? $variant->product->umkm_id;
+
+            $paymentMethods = PayMethodModel::where('is_active', true)
+                ->where('umkm_id', $umkmId)
+                ->get();
+
             $buyNowItem = (object)[
                 'variant' => $variant,
                 'qty'     => $data['qty']
             ];
-
-            $paymentMethods = PayMethodModel::where('is_active', true)->get();
 
             return view('customer.checkout', [
                 'title'          => 'Buat Pesanan | Trendora',
@@ -98,8 +162,8 @@ class CheckoutController extends Controller
         */
 
         $cart = CartModel::with([
-            'items.variant.product.mainImage', // ✅
-            'items.variant.product.umkm',      // ✅
+            'items.variant.product.mainImage',
+            'items.variant.product.umkm',
             'items.variant.branch'
         ])
             ->where('user_id', $user->id)
@@ -150,7 +214,12 @@ class CheckoutController extends Controller
             ->where('id', $branchId)
             ->get();
 
-        $paymentMethods = PayMethodModel::where('is_active', true)->get();
+        // ✅ Payment method sesuai UMKM produk di cart
+        $umkmId = $items->first()->variant->product->umkm_id;
+
+        $paymentMethods = PayMethodModel::where('is_active', true)
+            ->where('umkm_id', $umkmId)
+            ->get();
 
         $total = $items->sum(fn($item) => $item->variant->price * $item->qty);
 
@@ -164,9 +233,10 @@ class CheckoutController extends Controller
             'isBuyNow'       => false
         ]);
     }
+
     /*
     |--------------------------------------------------------------------------
-    | PROSES CHECKOUT (dari keranjang)
+    | STORE CHECKOUT (proses order)
     |--------------------------------------------------------------------------
     */
     public function store(Request $request)
@@ -190,12 +260,6 @@ class CheckoutController extends Controller
 
                 $totalPrice = 0;
 
-                $payment = PayMethodModel::findOrFail($request->payment_method_id);
-
-                if (!$payment->is_active) {
-                    throw new \Exception('invalid');
-                }
-
                 $branchValid = BranchModel::where('id', $request->branch_id)
                     ->where('is_active', true)
                     ->exists();
@@ -205,8 +269,8 @@ class CheckoutController extends Controller
                 }
 
                 /*
-            |---------------- BUY NOW ----------------|
-            */
+                |---------------- BUY NOW ----------------|
+                */
                 if ($request->filled('variant_id') && $request->filled('qty')) {
 
                     $variant = ProductVariantModel::lockForUpdate()
@@ -225,39 +289,45 @@ class CheckoutController extends Controller
                         throw new \Exception('invalid');
                     }
 
+                    // ✅ Validasi payment method milik UMKM produk
+                    $payment = PayMethodModel::where('id', $request->payment_method_id)
+                        ->where('is_active', true)
+                        ->where('umkm_id', $variant->product->umkm_id)
+                        ->firstOrFail();
+
                     $totalPrice = $variant->price * $request->qty;
 
                     $order = OrderModel::create([
-                        'user_id'              => $user->id,
-                        'branch_id'            => $variant->branch_id,
-                        'payment_method_id'    => $payment->id,
-                        'total_price'          => $totalPrice,
-                        'bank_name'            => $payment->bank_name,
-                        'bank_account_number'  => $payment->account_number,
-                        'bank_account_name'    => $payment->account_name,
-                        'payment_status'       => 'pending',
-                        'status'               => 'pending',
-                        'note'                 => $request->note,
+                        'user_id'             => $user->id,
+                        'branch_id'           => $variant->branch_id,
+                        'payment_method_id'   => $payment->id,
+                        'total_price'         => $totalPrice,
+                        'bank_name'           => $payment->bank_name,
+                        'bank_account_number' => $payment->account_number,
+                        'bank_account_name'   => $payment->account_name,
+                        'payment_status'      => 'pending',
+                        'status'              => 'pending',
+                        'note'                => $request->note,
                     ]);
 
                     OrderItemModel::create([
-                        'order_id'            => $order->id,
-                        'product_variant_id'  => $variant->id,
-                        'quantity'            => $request->qty,
-                        'price'               => $variant->price,
-                        'subtotal'            => $totalPrice,
-                        'product_name'        => $variant->product->name,
-                        'variant_sku'         => $variant->sku,
-                        'variant_attributes'  => $variant->attributes, // ✅
+                        'order_id'           => $order->id,
+                        'product_variant_id' => $variant->id,
+                        'quantity'           => $request->qty,
+                        'price'              => $variant->price,
+                        'subtotal'           => $totalPrice,
+                        'product_name'       => $variant->product->name,
+                        'variant_sku'        => $variant->sku,
+                        'variant_attributes' => $variant->attributes,
                     ]);
 
                     $variant->decrement('stock', $request->qty);
 
-                    session()->forget('buy_now'); // ✅ clear session setelah order
+                    session()->forget('buy_now');
 
                     /*
-            |---------------- CART MODE ----------------|
-            */
+                |---------------- CART MODE ----------------|
+                */
                 } else {
 
                     $cart = CartModel::with(['items.variant.product'])
@@ -279,6 +349,14 @@ class CheckoutController extends Controller
                     if ($request->branch_id != $realBranchId) {
                         throw new \Exception('invalid');
                     }
+
+                    // ✅ Validasi payment method milik UMKM produk di cart
+                    $umkmId = $cart->items->first()->variant->product->umkm_id;
+
+                    $payment = PayMethodModel::where('id', $request->payment_method_id)
+                        ->where('is_active', true)
+                        ->where('umkm_id', $umkmId)
+                        ->firstOrFail();
 
                     $order = OrderModel::create([
                         'user_id'             => $user->id,
@@ -322,7 +400,7 @@ class CheckoutController extends Controller
                             'subtotal'           => $subtotal,
                             'product_name'       => $variant->product->name,
                             'variant_sku'        => $variant->sku,
-                            'variant_attributes' => $variant->attributes, // ✅
+                            'variant_attributes' => $variant->attributes,
                         ]);
 
                         $variant->decrement('stock', $item->qty);
@@ -347,60 +425,5 @@ class CheckoutController extends Controller
                 'checkout' => 'Terjadi kesalahan saat proses checkout'
             ]);
         }
-    }
-
-    /*
-|--------------------------------------------------------------------------
-| BUY NOW
-|--------------------------------------------------------------------------
-*/
-    public function buyNow(Request $request)
-    {
-        $user = Auth::user();
-        if (!$user) {
-            abort(403);
-        }
-
-        $request->validate([
-            'variant_id' => 'required|integer|exists:product_variants,id',
-            'qty'        => 'required|integer|min:1|max:100'
-        ]);
-
-        $variant = ProductVariantModel::with(['product', 'branch'])
-            ->find($request->variant_id);
-
-        if (!$variant) {
-            return back()->with('error', 'Variant tidak ditemukan');
-        }
-
-        if (!$variant->product || !$variant->product->is_active) {
-            return back()->with('error', 'Produk tidak tersedia');
-        }
-
-        if (!$variant->branch || !$variant->branch->is_active) {
-            return back()->with('error', 'Cabang tidak tersedia');
-        }
-
-        if ($variant->stock <= 0) {
-            return back()->with('error', 'Stok habis');
-        }
-
-        if ($request->qty > $variant->stock) {
-            return back()->with('error', 'Jumlah melebihi stok');
-        }
-
-        session()->forget('buy_now');
-
-        session([
-            'buy_now' => [
-                'variant_id'     => $variant->id,
-                'qty'            => (int) $request->qty,
-                'price_snapshot' => $variant->price,
-                'branch_id'      => $variant->branch_id,
-                'expired_at'     => now()->addMinutes(10)->timestamp,
-            ]
-        ]);
-
-        return redirect()->route('customer.checkout');
     }
 }

@@ -42,5 +42,9 @@ class AppServiceProvider extends ServiceProvider
                 ->success()
                 ->send();
         }
+
+        \Illuminate\Support\Facades\Lang::addLines([
+            'filament-forms::components/select.no_options_message' => 'Data tidak ditemukan.',
+        ], 'en');
     }
 }

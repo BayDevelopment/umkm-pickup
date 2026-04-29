@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\UMKMS\Schemas;
 
+use App\Models\User;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -65,7 +66,7 @@ class UMKMForm
                         Select::make('user_id')
                             ->label('Owner')
                             ->options(function () {
-                                $owners = \App\Models\User::where('role', 'owner')
+                                $owners = User::where('role', 'owner')
                                     ->pluck('name', 'id');
 
                                 return $owners->isEmpty()
@@ -76,14 +77,14 @@ class UMKMForm
                                 fn() => Auth::user()->role === 'owner' ? Auth::id() : null
                             )
                             ->disabled(function () {
-                                $isOwnerEmpty = \App\Models\User::where('role', 'owner')->count() === 0;
+                                $isOwnerEmpty = User::where('role', 'owner')->count() === 0;
                                 return $isOwnerEmpty || Auth::user()->role !== 'admin';
                             })
                             ->dehydrated(fn() => Auth::user()->role === 'admin') // hanya kirim data jika admin
                             ->required()
                             ->searchable()
                             ->helperText(function () {
-                                if (\App\Models\User::where('role', 'owner')->count() === 0) {
+                                if (User::where('role', 'owner')->count() === 0) {
                                     return 'Pengguna dengan role owner kosong';
                                 }
                                 if (Auth::user()->role !== 'admin') {
@@ -122,6 +123,66 @@ class UMKMForm
                     ]),
 
                 // 🔹 STATUS (ADMIN ONLY 🔐)
+
+
+                // 🔹 PAYMENT METHOD
+                Section::make('Metode Pembayaran')
+                    ->description('Tambahkan metode pembayaran yang diterima UMKM ini')
+                    ->icon('heroicon-o-credit-card')
+                    ->schema([
+
+                        \Filament\Forms\Components\Repeater::make('paymentMethods')
+                            ->label('')
+                            ->relationship('paymentMethods')
+                            ->schema([
+
+                                Select::make('name')
+                                    ->label('Jenis Pembayaran')
+                                    ->options([
+                                        'Cash'             => 'Cash',
+                                        'Transfer BCA'     => 'Transfer BCA',
+                                        'Transfer Mandiri' => 'Transfer Mandiri',
+                                        'Transfer BRI'     => 'Transfer BRI',
+                                        'Transfer BNI'     => 'Transfer BNI',
+                                        'Transfer BSI'     => 'Transfer BSI',
+                                        'Dana'             => 'Dana',
+                                    ])
+                                    ->required()
+                                    ->live(),
+
+                                TextInput::make('bank_name')
+                                    ->label('Nama Bank / Dompet Digital')
+                                    ->placeholder('Contoh: BCA, Mandiri, Dana')
+                                    ->visible(fn($get) => !in_array($get('name'), ['Cash', 'QRIS', null]))
+                                    ->maxLength(100),
+
+                                TextInput::make('account_number')
+                                    ->label('Nomor Rekening / Nomor HP')
+                                    ->placeholder('Contoh: 1234567890 / 0813xxxxxxxx')
+                                    ->visible(fn($get) => !in_array($get('name'), ['Cash', null]))
+                                    ->maxLength(50),
+
+                                TextInput::make('account_name')
+                                    ->label('Nama Pemilik Akun')
+                                    ->placeholder('Contoh: Budi Santoso')
+                                    ->visible(fn($get) => !in_array($get('name'), ['Cash', null]))
+                                    ->maxLength(100),
+
+                                \Filament\Forms\Components\Toggle::make('is_active')
+                                    ->label('Aktif')
+                                    ->default(true),
+
+                            ])
+                            ->columns(1)
+                            ->addActionLabel('+ Tambah Metode Pembayaran')
+                            ->defaultItems(0)
+                            ->collapsible()
+                            ->itemLabel(fn(array $state): ?string => $state['name'] ?? 'Metode Baru')
+                            ->reorderable(false),
+
+                    ]),
+
+
                 Section::make('Status Verifikasi')
                     ->description('Kontrol oleh admin')
                     ->icon('heroicon-o-shield-check')

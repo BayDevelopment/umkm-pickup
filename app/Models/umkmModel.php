@@ -52,6 +52,10 @@ class umkmModel extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function paymentMethods()
+    {
+        return $this->hasMany(PayMethodModel::class, 'umkm_id');
+    }
     /*
     |--------------------------------------------------------------------------
     | ACCESSORS (OPTIONAL BAGUS)
