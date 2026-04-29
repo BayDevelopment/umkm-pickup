@@ -2,10 +2,8 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -28,9 +26,9 @@ class UserForm
                         ->regex('/^[a-zA-Z0-9\s]+$/')
                         ->placeholder('Masukan nama/username')
                         ->validationMessages([
-                            'required' => 'Nama wajib diisi',
+                            'required'  => 'Nama wajib diisi',
                             'minLength' => 'Minimal 3 karakter',
-                            'regex' => 'Nama hanya boleh huruf dan angka',
+                            'regex'     => 'Nama hanya boleh huruf dan angka',
                         ]),
 
                     TextInput::make('email')
@@ -41,16 +39,34 @@ class UserForm
                         ->maxLength(150)
                         ->validationMessages([
                             'required' => 'Email wajib diisi',
-                            'email' => 'Format email tidak valid',
-                            'unique' => 'Email sudah digunakan',
+                            'email'    => 'Format email tidak valid',
+                            'unique'   => 'Email sudah digunakan',
+                        ]),
+
+                    // ✅ PHONE / NO. WHATSAPP
+                    TextInput::make('phone')
+                        ->label('No. WhatsApp')
+                        ->placeholder('Contoh: 08131234567')
+                        ->tel()
+                        ->nullable()
+                        ->unique(ignoreRecord: true)
+                        ->minLength(10)
+                        ->maxLength(15)
+                        ->regex('/^(\+62|62|0)8[1-9][0-9]{7,11}$/')
+                        ->helperText('Format: 08xx / +62xx')
+                        ->validationMessages([
+                            'unique'    => 'Nomor WhatsApp sudah digunakan.',
+                            'minLength' => 'Nomor minimal 10 digit.',
+                            'maxLength' => 'Nomor maksimal 15 digit.',
+                            'regex'     => 'Format nomor tidak valid. Gunakan format 08xx atau +62xx.',
                         ]),
 
                     Select::make('role')
                         ->required()
                         ->options([
-                            'admin' => 'Admin',
+                            'admin'    => 'Admin',
                             'customer' => 'Customer',
-                            'owner' => 'Owner',
+                            'owner'    => 'Owner',
                         ])
                         ->default('customer')
                         ->native(false)
@@ -62,8 +78,8 @@ class UserForm
                         ->label('Status Akun')
                         ->required()
                         ->options([
-                            'pending' => 'Pending',
-                            'active' => 'Active',
+                            'pending'   => 'Pending',
+                            'active'    => 'Active',
                             'suspended' => 'Suspended',
                         ])
                         ->default(fn() => Auth::user()->role === 'admin' ? 'active' : 'pending')
@@ -72,6 +88,7 @@ class UserForm
                         ->validationMessages([
                             'required' => 'Status wajib dipilih',
                         ]),
+
                 ]),
 
             Section::make('Keamanan')
@@ -83,7 +100,7 @@ class UserForm
                             ->password()
                             ->minLength(8)
                             ->maxLength(100)
-                            ->regex('/^(?=.*[A-Za-z])(?=.*\d).+$/') // wajib huruf + angka
+                            ->regex('/^(?=.*[A-Za-z])(?=.*\d).+$/')
                             ->placeholder('Masukan password')
                             ->autocomplete('new-password')
                             ->required(fn(string $operation) => $operation === 'create')
@@ -91,9 +108,9 @@ class UserForm
                             ->dehydrated(fn($state) => filled($state))
                             ->helperText('Minimal 8 karakter, kombinasi huruf & angka.')
                             ->validationMessages([
-                                'required' => 'Password wajib diisi',
+                                'required'  => 'Password wajib diisi',
                                 'minLength' => 'Minimal 8 karakter',
-                                'regex' => 'Password harus mengandung huruf dan angka',
+                                'regex'     => 'Password harus mengandung huruf dan angka',
                             ]),
 
                     ]),
